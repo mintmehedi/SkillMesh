@@ -1,0 +1,38 @@
+# Python/Django
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+.tox/
+
+# Conda/Venv
+env/
+venv/
+ENV/
+.skillmesh/  
+.venv/
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.sublime*
+
+# macOS
+.DS_Store
+
+# OS
+Thumbs.db
