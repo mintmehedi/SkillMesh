@@ -36,3 +36,13 @@ staticfiles/
 
 # OS
 Thumbs.db
+
+# Node / React dependencies
+node_modules/
+dist/
+.env
+
+# Python / Django dependencies
+__pycache__/
+*.pyc
+db.sqlite3
