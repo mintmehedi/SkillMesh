@@ -1,6 +1,6 @@
-# Intelligent Talent Matching Platform (SkillMesh)
+# SkillMesh - Intelligent Talent Matching Platform
 
-An intelligent, two-sided recruitment platform designed to connect job seekers with employers using advanced recommendation algorithms. 
+Full-stack web app (Indeed/Seek style) with role-based candidate and employer workflows.
 
 ## 🏗️ System Architecture
 
@@ -38,25 +38,9 @@ graph TD
 * **Database:** PostgreSQL (Hosted on Supabase)
 * **Architecture:** Decoupled Monorepo
 
-## ✨ Core Features
-* **Candidate Portal:** Profile creation, resume parsing/upload, and algorithmic Top-10 job recommendations based on skills and experience.
-* **Employer Portal:** Job posting creation, applicant filtering, and algorithmic Top-10 candidate recommendations.
-* **Intelligent Matching Engine:** Backend Python algorithms matching structured job descriptions with candidate profiles.
-* **Secure Architecture:** Row Level Security (RLS) via Supabase and strict API authentication.
+## Quick Start
 
----
-
-## 🛠️ Local Setup Guide for Developers
-
-Follow these steps precisely to get the full-stack application running on your local machine.
-
-### Prerequisites
-Before you begin, ensure you have the following installed on your machine:
-* **Git**
-* **Node.js** (v18+ recommended)
-* **Python** (v3.10+ recommended) & **Anaconda/Miniconda**
-
-### 1. Clone the Repository
+### Backend
 ```bash
 git clone https://github.com/your-org/SkillMesh.git
 cd SkillMesh
@@ -82,23 +66,11 @@ VITE_SUPABASE_ANON_KEY=your_provided_anon_key
 Open a terminal in the root `SkillMesh` folder.
 
 ```bash
-# 1. Navigate to the backend folder
 cd backend
-
-# 2. Create a dedicated conda environment
-conda create -n skillmesh_env python=3.11 -y
-
-# 3. Activate the environment
-conda activate skillmesh_env
-
-# 4. Install dependencies 
-pip install django djangorestframework psycopg2-binary django-cors-headers dj-database-url python-dotenv pandas scikit-learn
-
-# 5. Run database migrations (connects to Supabase)
-python manage.py migrate
-
-# 6. Start the development server
-python manage.py runserver
+python3 -m pip install -r requirements.txt
+python3 manage.py makemigrations
+python3 manage.py migrate
+python3 manage.py runserver
 ```
 *The backend should now be running at `http://127.0.0.1:8000/`*
 
@@ -138,4 +110,3 @@ SkillMesh/
 2. Create a new branch for your feature: `git checkout -b feature/your-feature-name`
 3. Commit your changes: `git commit -m "Add candidate profile form"`
 4. Push to your branch and open a Pull Request (PR) for code review.
-```
