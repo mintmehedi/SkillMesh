@@ -1,4 +1,3 @@
-```markdown
 # Intelligent Talent Matching Platform (SkillMesh)
 
 An intelligent, two-sided recruitment platform designed to connect job seekers with employers using advanced recommendation algorithms. 
