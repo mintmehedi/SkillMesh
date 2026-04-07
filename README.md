@@ -186,3 +186,29 @@ Create a new branch for your feature: git checkout -b feature/your-feature-name
 Commit your changes: git commit -m "Add candidate profile form"
 
 Push to your branch and open a Pull Request (PR) for code review.
+
+graph TD
+    subgraph "Client Layer (Frontend)"
+        A[React App / Vite]
+        B[State Management / Hooks]
+    end
+
+    subgraph "Logic Layer (Backend)"
+        C[Django REST Framework]
+        D[Authentication Middleware]
+        E[Intelligent Matching Logic]
+    end
+
+    subgraph "Data Layer (Supabase)"
+        F[PostgreSQL Database]
+        G[Supabase Auth]
+        H[Storage / Resumes]
+    end
+
+    %% Interactions
+    A -- HTTP Requests/JSON --> C
+    C -- Validates JWT --> G
+    C -- SQL Queries --> F
+    C -- Stores/Fetches PDFs --> H
+    E -- Process Data --> C
+    C -- Response Data --> A
