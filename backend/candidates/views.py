@@ -1,11 +1,19 @@
 from django.utils.dateparse import parse_datetime
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.permissions import IsCandidate
-from .models import CandidateProfile, CandidateSkill, ResumeDocument
+from employers.models import JobCategory
+from employers.serializers import JobCategorySerializer
+
+from .models import CandidateProfile, CandidateSkill, ResumeDocument, WorkExperience
 from .resume_parser import extract_text_from_upload, parse_resume_text
-from .serializers import CandidateProfileSerializer, ResumeUploadSerializer
+from .serializers import (
+    CandidateProfileSerializer,
+    ResumeUploadSerializer,
+    WorkExperienceSerializer,
+)
 
 
 class CandidateProfileUpsertView(generics.GenericAPIView):
@@ -19,11 +27,17 @@ class CandidateProfileUpsertView(generics.GenericAPIView):
         return Response(self.get_serializer(profile).data)
 
     def post(self, request):
+        return self._save(request, partial=False)
+
+    def patch(self, request):
+        return self._save(request, partial=True)
+
+    def _save(self, request, partial):
         profile = CandidateProfile.objects.filter(user=request.user).first()
         if profile:
-            serializer = self.get_serializer(profile, data=request.data, partial=True)
+            serializer = self.get_serializer(profile, data=request.data, partial=partial)
         else:
-            serializer = self.get_serializer(data=request.data)
+            serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -58,6 +72,38 @@ class CandidateSearchView(generics.ListAPIView):
         if location:
             qs = qs.filter(location__icontains=location)
         return qs.distinct().order_by("-id")
+
+
+class JobCategoryListView(generics.ListAPIView):
+    queryset = JobCategory.objects.all()
+    serializer_class = JobCategorySerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class WorkExperienceBulkView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        profile = CandidateProfile.objects.filter(user=request.user).first()
+        if not profile:
+            return Response([])
+        data = WorkExperienceSerializer(profile.work_experiences.all(), many=True)
+        return Response(data.data)
+
+    def put(self, request):
+        profile, _ = CandidateProfile.objects.get_or_create(
+            user=request.user,
+            defaults={"full_name": request.user.get_full_name() or request.user.email},
+        )
+        serializer = WorkExperienceSerializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        profile.work_experiences.all().delete()
+        for row in serializer.validated_data:
+            WorkExperience.objects.create(candidate=profile, **row)
+        return Response(
+            WorkExperienceSerializer(profile.work_experiences.all(), many=True).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class ResumeUploadView(generics.GenericAPIView):
