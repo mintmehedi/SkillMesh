@@ -16,13 +16,14 @@ export function clearTokens() {
 
 export async function api(path, options = {}) {
   const token = getToken();
+  const withAuth = options.withAuth !== false;
   const headers = {
     ...(options.headers || {}),
   };
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
-  if (token) {
+  if (withAuth && token) {
     headers.Authorization = `Bearer ${token}`;
   }
   const response = await fetch(`${API_BASE_URL}${path}`, {

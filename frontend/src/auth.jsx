@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
       const me = await api("/api/auth/me");
       setUser(me);
     } catch {
+      clearTokens();
       setUser(null);
     } finally {
       setLoading(false);
@@ -26,6 +27,7 @@ export function AuthProvider({ children }) {
     const data = await api("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+      withAuth: false,
     });
     setTokens(data.access, data.refresh);
     await refreshMe();
@@ -35,6 +37,7 @@ export function AuthProvider({ children }) {
     await api("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
+      withAuth: false,
     });
     await login(payload.email, payload.password);
   }

@@ -1,3 +1,4 @@
+from django.db.models import Case, IntegerField, Value, When
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 
@@ -62,3 +63,36 @@ class JobSearchView(generics.ListAPIView):
         if keyword:
             qs = qs.filter(jd_text__icontains=keyword)
         return qs.order_by("-created_at")
+
+
+class JobFeedView(generics.ListAPIView):
+    """
+    Homepage job list: open jobs, newest first.
+    If logged-in candidate has preferred categories, matching jobs are listed first.
+    """
+
+    serializer_class = JobPostingSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = (
+            JobPosting.objects.filter(status="open")
+            .select_related("job_category", "employer")
+            .order_by("-created_at")
+        )
+        user = self.request.user
+        if (
+            user.is_authenticated
+            and getattr(user, "role", None) == "candidate"
+        ):
+            profile = getattr(user, "candidate_profile", None)
+            if profile and profile.preferred_job_categories.exists():
+                pref_ids = list(profile.preferred_job_categories.values_list("id", flat=True))
+                qs = qs.annotate(
+                    _pref_order=Case(
+                        When(job_category_id__in=pref_ids, then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
+                ).order_by("_pref_order", "-created_at")
+        return qs
