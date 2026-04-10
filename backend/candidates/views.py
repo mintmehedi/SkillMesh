@@ -100,8 +100,15 @@ class WorkExperienceBulkView(APIView):
         profile.work_experiences.all().delete()
         for row in serializer.validated_data:
             WorkExperience.objects.create(candidate=profile, **row)
+        if profile.onboarding_step == CandidateProfile.OnboardingStep.RESUME:
+            profile.onboarding_step = CandidateProfile.OnboardingStep.CATEGORIES
+            profile.save(update_fields=["onboarding_step"])
         return Response(
-            WorkExperienceSerializer(profile.work_experiences.all(), many=True).data,
+            {
+                "work_experiences": WorkExperienceSerializer(profile.work_experiences.all(), many=True).data,
+                "next_step": CandidateProfile.OnboardingStep.CATEGORIES,
+                "next_route": "/onboarding/categories",
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -116,8 +123,16 @@ class ResumeUploadView(generics.GenericAPIView):
         )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        resume = ResumeDocument.objects.create(candidate=profile, file=serializer.validated_data["file"])
-        raw_text = extract_text_from_upload(serializer.validated_data["file"])
+        uploaded = serializer.validated_data["file"]
+        resume = ResumeDocument.objects.create(candidate=profile, file=uploaded)
+        try:
+            resume.file.open("rb")
+            raw_text = extract_text_from_upload(resume.file)
+        except Exception as exc:
+            return Response(
+                {"detail": f"Could not parse resume file. {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         parsed = parse_resume_text(raw_text)
         resume.raw_text = raw_text
         resume.parsed_json = parsed
@@ -126,6 +141,7 @@ class ResumeUploadView(generics.GenericAPIView):
 
         profile.education_level = profile.education_level or parsed.get("education_level", "")
         profile.years_experience = max(profile.years_experience, parsed.get("years_experience", 0))
+        profile.onboarding_step = CandidateProfile.OnboardingStep.RESUME
         profile.save()
         for skill in parsed.get("skills", []):
             CandidateSkill.objects.get_or_create(candidate=profile, skill_name=skill, defaults={"level": 1})
@@ -147,3 +163,37 @@ class ResumeReprocessView(generics.GenericAPIView):
         resume.parsed_at = parse_datetime(parsed["parsed_at"])
         resume.save()
         return Response(ResumeUploadSerializer(resume).data)
+
+
+class CandidateOnboardingAdvanceView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def post(self, request):
+        action = (request.data.get("action") or "").strip()
+        profile, _ = CandidateProfile.objects.get_or_create(
+            user=request.user,
+            defaults={"full_name": request.user.get_full_name() or request.user.email},
+        )
+        if action not in {"skip_resume_experience", "complete_resume_experience", "complete_categories"}:
+            return Response({"detail": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action in {"skip_resume_experience", "complete_resume_experience"}:
+            profile.onboarding_step = CandidateProfile.OnboardingStep.CATEGORIES
+            profile.save(update_fields=["onboarding_step"])
+            return Response(
+                {
+                    "onboarding_step": profile.onboarding_step,
+                    "next_route": "/onboarding/categories",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        profile.onboarding_step = CandidateProfile.OnboardingStep.DONE
+        profile.save(update_fields=["onboarding_step"])
+        return Response(
+            {
+                "onboarding_step": profile.onboarding_step,
+                "next_route": "/candidate",
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -11,6 +11,16 @@ class CandidateSkillSerializer(serializers.ModelSerializer):
 
 
 class WorkExperienceSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        is_current = attrs.get("is_current", False)
+        end_date = attrs.get("end_date")
+        start_date = attrs.get("start_date")
+        if is_current:
+            attrs["end_date"] = None
+        if (not is_current) and start_date and end_date and end_date < start_date:
+            raise serializers.ValidationError("End date cannot be before start date.")
+        return attrs
+
     class Meta:
         model = WorkExperience
         fields = (
@@ -23,6 +33,7 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
             "description",
             "sort_order",
         )
+        read_only_fields = ("id",)
 
 
 class JobCategoryBriefSerializer(serializers.ModelSerializer):
@@ -92,6 +103,14 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
 
 
 class ResumeUploadSerializer(serializers.ModelSerializer):
+    ALLOWED_EXTENSIONS = (".pdf", ".docx", ".jpg", ".jpeg", ".png")
+
+    def validate_file(self, value):
+        name = (value.name or "").lower()
+        if not name.endswith(self.ALLOWED_EXTENSIONS):
+            raise serializers.ValidationError("Only PDF, DOCX, JPG, JPEG, and PNG files are supported.")
+        return value
+
     class Meta:
         model = ResumeDocument
         fields = ("id", "file", "raw_text", "parsed_json", "parsed_at", "created_at")
