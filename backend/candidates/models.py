@@ -18,7 +18,7 @@ class CandidateProfile(models.Model):
     mobile_number = models.CharField(max_length=32, blank=True)
     education_level = models.CharField(max_length=120, blank=True)
     major = models.CharField(max_length=120, blank=True)
-    years_experience = models.PositiveIntegerField(default=0)
+    years_experience = models.PositiveIntegerField(default=0)  # pyright: ignore[reportArgumentType]
     location = models.CharField(max_length=120, blank=True)
     preferred_mode = models.CharField(max_length=20, blank=True)
     summary = models.TextField(blank=True)
@@ -40,9 +40,9 @@ class WorkExperience(models.Model):
     company_name = models.CharField(max_length=255, blank=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
-    is_current = models.BooleanField(default=False)
+    is_current = models.BooleanField(default=False)  # pyright: ignore[reportArgumentType]
     description = models.TextField(blank=True)
-    sort_order = models.PositiveSmallIntegerField(default=0)
+    sort_order = models.PositiveSmallIntegerField(default=0)  # pyright: ignore[reportArgumentType]
 
     class Meta:
         ordering = ["sort_order", "-start_date", "id"]
@@ -51,7 +51,7 @@ class WorkExperience(models.Model):
 class CandidateSkill(models.Model):
     candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE, related_name="skills")
     skill_name = models.CharField(max_length=100)
-    level = models.PositiveSmallIntegerField(default=1)
+    level = models.PositiveSmallIntegerField(default=1)  # pyright: ignore[reportArgumentType]
 
 
 class ResumeDocument(models.Model):

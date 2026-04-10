@@ -1,7 +1,6 @@
-# Python/Django
+# Python / Django
 __pycache__/
 *.py[cod]
-*.pyc
 *.pyo
 *$py.class
 *.egg-info/
@@ -12,18 +11,33 @@ htmlcov/
 coverage.xml
 .tox/
 
-# Conda/Venv
+# Virtual environments
 env/
 venv/
 ENV/
-.skillmesh/  
 .venv/
+.skillmesh/
 
-# Django
+# Django runtime & assets
 *.log
 db.sqlite3
+*.sqlite3
 media/
 staticfiles/
+
+# Secrets & environment (never commit real credentials)
+.env
+backend/.env
+frontend/.env
+.env.local
+.env.development.local
+.env.production.local
+*.pem
+*.key
+secrets/
+credentials.json
+service-account*.json
+*credentials*.json
 
 # IDEs
 .vscode/
@@ -31,19 +45,13 @@ staticfiles/
 *.swp
 *.sublime*
 
-# macOS
+# macOS / Windows
 .DS_Store
-
-# OS
 Thumbs.db
 
-# Node / React dependencies
+# Node / frontend build
 node_modules/
 dist/
-.env
 
-# Python / Django dependencies
-__pycache__/
-*.pyc
-db.sqlite3
+# Deploy / misc
 .vercel

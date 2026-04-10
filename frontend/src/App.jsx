@@ -51,6 +51,7 @@ function AuthBrand() {
 
 function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -63,6 +64,7 @@ function LoginPage() {
         setError("");
         try {
           await login(email, password);
+          navigate("/", { replace: true });
         } catch (err) {
           setError(String(err.message || err));
         }
@@ -96,6 +98,7 @@ function LoginPage() {
 
 function RegisterPage() {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roleFromQuery = searchParams.get("role");
   const initialRole = roleFromQuery === "employer" ? "employer" : "candidate";
@@ -251,6 +254,11 @@ function RegisterPage() {
         setError("");
         try {
           await register(form);
+          if (form.role === "candidate") {
+            navigate("/onboarding/work-experience");
+          } else {
+            navigate("/employer");
+          }
         } catch (err) {
           setError(String(err.message || err));
         }
@@ -473,6 +481,670 @@ function RegisterPage() {
   );
 }
 
+function CandidateOnboardingRoute({ page, children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <p>Loading...</p>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "candidate") return <Navigate to="/" replace />;
+  const step = user?.candidate_onboarding?.onboarding_step;
+
+  if (page === "dashboard") {
+    if (step === "resume") return <Navigate to="/onboarding/work-experience" replace />;
+    if (step === "categories") return <Navigate to="/onboarding/categories" replace />;
+    return children;
+  }
+  if (page === "work_experience") {
+    if (step === "categories") return <Navigate to="/onboarding/categories" replace />;
+    if (step === "done") return <Navigate to="/" replace />;
+    return children;
+  }
+  if (page === "categories") {
+    if (step === "resume") return <Navigate to="/onboarding/work-experience" replace />;
+    if (step === "done") return <Navigate to="/" replace />;
+    return children;
+  }
+  return children;
+}
+
+function CandidateOnboardingWorkExperience() {
+  const navigate = useNavigate();
+  const { refreshMe } = useAuth();
+  const [resumeFile, setResumeFile] = useState(null);
+  /** True once the current resumeFile has been POSTed to the server (auto-fill or save). */
+  const [resumeSynced, setResumeSynced] = useState(false);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState("");
+  const [showLargePreview, setShowLargePreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [workRows, setWorkRows] = useState([
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 0 },
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 1 },
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 2 },
+  ]);
+  const emptyRows = [
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 0 },
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 1 },
+    { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: 2 },
+  ];
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const rows = await api("/api/candidates/work-experience/");
+        if (!alive) return;
+        if (Array.isArray(rows) && rows.length > 0) {
+          setWorkRows(rows.map((r, idx) => ({ ...r, sort_order: idx })));
+        }
+      } catch {
+        // keep initial form state
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (resumePreviewUrl) URL.revokeObjectURL(resumePreviewUrl);
+    };
+  }, [resumePreviewUrl]);
+
+  function onResumeSelected(file) {
+    setResumeFile(file || null);
+    setResumeSynced(false);
+    setStatus("");
+    setError("");
+    if (resumePreviewUrl) URL.revokeObjectURL(resumePreviewUrl);
+    const fileName = (file?.name || "").toLowerCase();
+    const isPreviewable =
+      !!file && (
+        file.type.startsWith("image/")
+        || file.type === "application/pdf"
+        || fileName.endsWith(".pdf")
+        || fileName.endsWith(".png")
+        || fileName.endsWith(".jpg")
+        || fileName.endsWith(".jpeg")
+      );
+    if (isPreviewable) {
+      setResumePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setResumePreviewUrl("");
+    }
+  }
+
+  function updateRow(index, patch) {
+    setWorkRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  function addRow() {
+    setWorkRows((prev) => [
+      ...prev,
+      { job_title: "", company_name: "", description: "", start_date: "", end_date: "", is_current: false, sort_order: prev.length },
+    ]);
+  }
+
+  function removeRow(index) {
+    setWorkRows((prev) => prev.filter((_, i) => i !== index).map((r, i) => ({ ...r, sort_order: i })));
+  }
+
+  async function autoFillFromResume() {
+    if (!resumeFile) {
+      setError("Please upload a resume first.");
+      return;
+    }
+    setUploading(true);
+    setError("");
+    setStatus("");
+    try {
+      const fd = new FormData();
+      fd.append("file", resumeFile);
+      const resume = await api("/api/candidates/resume/upload", { method: "POST", body: fd });
+      setResumeSynced(true);
+      const parsedRows = resume?.parsed_json?.work_experiences || [];
+      const confidence = resume?.parsed_json?.experience_parse_confidence;
+      if (parsedRows.length > 0 && (typeof confidence !== "number" || confidence >= 0.5)) {
+        setWorkRows(parsedRows.map((r, idx) => ({ ...r, sort_order: idx })));
+        const confidenceText = typeof confidence === "number" ? ` (confidence: ${Math.round(confidence * 100)}%)` : "";
+        setStatus(`Resume parsed. Work experiences were auto-filled${confidenceText}.`);
+      } else {
+        setWorkRows(emptyRows);
+        if (typeof confidence === "number") {
+          setStatus(`Resume uploaded, but extraction confidence is low (${Math.round(confidence * 100)}%). Please fill manually.`);
+        } else {
+          setStatus("Resume uploaded. No clear work experience found, please fill manually.");
+        }
+      }
+    } catch (err) {
+      setError(String(err.message || err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function saveAndContinue() {
+    setSaving(true);
+    setError("");
+    setStatus("");
+    try {
+      if (resumeFile && !resumeSynced) {
+        const fd = new FormData();
+        fd.append("file", resumeFile);
+        await api("/api/candidates/resume/upload", { method: "POST", body: fd });
+        setResumeSynced(true);
+      }
+      const payload = workRows
+        .filter((r) => r.job_title.trim())
+        .map((r, idx) => ({
+          ...r,
+          sort_order: idx,
+          end_date: r.is_current ? null : (r.end_date || null),
+        }));
+      await api("/api/candidates/work-experience/", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      await refreshMe();
+      navigate("/onboarding/categories");
+    } catch (err) {
+      setError(String(err.message || err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function skipStep() {
+    setError("");
+    setStatus("");
+    try {
+      await api("/api/candidates/onboarding/advance", {
+        method: "POST",
+        body: JSON.stringify({ action: "skip_resume_experience" }),
+      });
+      await refreshMe();
+      navigate("/onboarding/categories");
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  return (
+    <section className="card authCard onboardingCard fadeInUp">
+      <div className="onboardTop">
+        <AuthBrand />
+        <button type="button" className="btnGhost" onClick={skipStep}>Skip</button>
+      </div>
+      <h2>Resume & Work Experience</h2>
+      <p className="muted">Upload resume (PDF/JPG/PNG) and add your experience. We can auto-fill from your resume.</p>
+      {status && <p className="success">{status}</p>}
+      {error && <p className="error">{error}</p>}
+
+      <div className="onboardResumeRow">
+        <input
+          className="authInput"
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,.docx"
+          onChange={(e) => onResumeSelected(e.target.files?.[0] || null)}
+        />
+        <button type="button" className="modernBtn" onClick={autoFillFromResume} disabled={uploading}>
+          {uploading ? "Parsing resume..." : "Auto-fill from resume"}
+        </button>
+      </div>
+
+      {resumeFile && (
+        <div className="resumePreviewMini">
+          <div>
+            <strong>{resumeFile.name}</strong>
+            <small>{Math.round(resumeFile.size / 1024)} KB</small>
+          </div>
+          {!!resumePreviewUrl && (
+            <button type="button" className="btnGhost" onClick={() => setShowLargePreview(true)}>Preview</button>
+          )}
+        </div>
+      )}
+
+      <h4 className="registerSectionTitle">Work experiences</h4>
+      {workRows.map((row, index) => (
+        <div className="experienceCard" key={`exp-${index}`}>
+          <div className="onboardGrid">
+            <input className="authInput" placeholder="Job role" value={row.job_title || ""} onChange={(e) => updateRow(index, { job_title: e.target.value })} />
+            <input className="authInput" placeholder="Company name" value={row.company_name || ""} onChange={(e) => updateRow(index, { company_name: e.target.value })} />
+          </div>
+          <textarea className="authInput" placeholder="Job description" value={row.description || ""} onChange={(e) => updateRow(index, { description: e.target.value })} />
+          <div className="onboardGrid">
+            <input className="authInput" type="date" value={row.start_date || ""} onChange={(e) => updateRow(index, { start_date: e.target.value })} />
+            {!row.is_current ? (
+              <input className="authInput" type="date" value={row.end_date || ""} onChange={(e) => updateRow(index, { end_date: e.target.value })} />
+            ) : (
+              <div className="presentNowTag">Present role</div>
+            )}
+          </div>
+          <div className="onboardActions">
+            <label className="checkLine">
+              <input
+                type="checkbox"
+                checked={!!row.is_current}
+                onChange={(e) => updateRow(index, { is_current: e.target.checked, end_date: e.target.checked ? "" : row.end_date })}
+              />
+              I currently work here
+            </label>
+            {workRows.length > 1 && (
+              <button type="button" className="btnGhost" onClick={() => removeRow(index)}>Remove</button>
+            )}
+          </div>
+        </div>
+      ))}
+      <button type="button" className="addExpBtn" onClick={addRow}>+ Add more work experience</button>
+      <button type="button" className="modernBtn authSubmitBtn" onClick={saveAndContinue} disabled={saving}>
+        {saving ? "Saving..." : "Save and continue"}
+      </button>
+
+      {showLargePreview && (
+        <div className="resumeOverlay" onClick={() => setShowLargePreview(false)}>
+          <div className="resumePreviewModal" onClick={(e) => e.stopPropagation()}>
+            <div className="resumePreviewToolbar">
+              <span className="resumePreviewName">{resumeFile?.name || "Resume"}</span>
+              <button type="button" className="resumePreviewClose" onClick={() => setShowLargePreview(false)}>
+                Close
+              </button>
+            </div>
+            <div className="resumePreviewBody">
+              {resumeFile?.type.startsWith("image/") || /\.(png|jpg|jpeg)$/i.test(resumeFile?.name || "") ? (
+                <img src={resumePreviewUrl} alt="Resume preview" />
+              ) : (
+                <iframe src={resumePreviewUrl} title="Resume preview" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CandidateCategoryOnboarding() {
+  const navigate = useNavigate();
+  const { refreshMe } = useAuth();
+  const [categories, setCategories] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await api("/api/candidates/job-categories/", { withAuth: false });
+        setCategories(rows || []);
+      } catch {
+        setCategories([]);
+      }
+    })();
+  }, []);
+
+  function toggleCategory(id) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
+  }
+
+  async function completeCategories() {
+    setSaving(true);
+    setError("");
+    try {
+      await api("/api/candidates/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          preferred_job_category_ids: selected,
+          onboarding_step: "done",
+        }),
+      });
+      await api("/api/candidates/onboarding/advance", {
+        method: "POST",
+        body: JSON.stringify({ action: "complete_categories" }),
+      });
+      await refreshMe();
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(String(err.message || err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="card authCard onboardingCard fadeInUp">
+      <div className="onboardTop">
+        <AuthBrand />
+      </div>
+      <h2>Select preferred job categories</h2>
+      <p className="muted">Choose categories so SkillMesh can prioritize better matches.</p>
+      {error && <p className="error">{error}</p>}
+      <div className="categoryGrid">
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={`categoryPill ${selected.includes(c.id) ? "categoryPillActive" : ""}`}
+            onClick={() => toggleCategory(c.id)}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+      <button className="modernBtn authSubmitBtn" type="button" onClick={completeCategories} disabled={saving}>
+        {saving ? "Saving..." : "Finish onboarding"}
+      </button>
+    </section>
+  );
+}
+
+function CandidateMemberHeader() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
+      <Link to="/" className="homeHeaderBrand candidateHeaderBrand">
+        <img className="homeHeaderLogo" src={ldLogo} alt="SkillMesh logo" />
+        <span className="homeHeaderWordmark">SkillMesh</span>
+      </Link>
+      <div className="homeHeaderActions candidateHeaderActions">
+        <Link className="btnGhost" to="/">Home</Link>
+        <Link className="btnGhost" to="/candidate">Profile & tools</Link>
+        <button
+          type="button"
+          className="btnGhost"
+          onClick={() => {
+            logout();
+            navigate("/", { replace: true });
+          }}
+        >
+          Log out
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function CandidateHomePage() {
+  const { user } = useAuth();
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim()
+    || user?.username
+    || user?.email
+    || "there";
+
+  const [profile, setProfile] = useState(null);
+  const [postcode, setPostcode] = useState("");
+  const [nearbyJobs, setNearbyJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState("");
+  const [recommended, setRecommended] = useState([]);
+  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [keyword, setKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await api("/api/candidates/profile");
+        if (alive && data?.id) setProfile(data);
+      } catch {
+        /* ignore */
+      }
+      try {
+        const recs = await api("/api/recommendations/jobs-for-candidate");
+        if (alive) setRecommended(Array.isArray(recs) ? recs : []);
+      } catch {
+        if (alive) setRecommended([]);
+      } finally {
+        if (alive) setLoadingRecs(false);
+      }
+      try {
+        const apps = await api("/api/applications/");
+        if (alive) setApplications(Array.isArray(apps) ? apps : []);
+      } catch {
+        if (alive) setApplications([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function viewNearbyJobs() {
+    setJobsError("");
+    setLoadingJobs(true);
+    try {
+      const feed = await api("/api/jobs/feed", { withAuth: false });
+      const normalized = postcode.trim().toLowerCase();
+      const filtered = normalized
+        ? feed.filter((j) => (j.location || "").toLowerCase().includes(normalized))
+        : feed;
+      setNearbyJobs(filtered.slice(0, 8));
+    } catch {
+      setJobsError("Could not load jobs right now. Please try again.");
+    } finally {
+      setLoadingJobs(false);
+    }
+  }
+
+  async function runJobSearch() {
+    setError("");
+    try {
+      const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(keyword)}`);
+      setSearchResults(Array.isArray(rows) ? rows.slice(0, 12) : []);
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  async function applyToJob(jobId) {
+    setError("");
+    setStatus("");
+    try {
+      await api("/api/applications/", {
+        method: "POST",
+        body: JSON.stringify({ job: jobId }),
+      });
+      setStatus(`Application sent for job #${jobId}`);
+      const apps = await api("/api/applications/");
+      setApplications(Array.isArray(apps) ? apps : []);
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  return (
+    <main className="homePage candidateHomePage">
+      <CandidateMemberHeader />
+
+      <section className={`candidateHomeHero ${headerScrolled ? "candidateHomeHeroCompact" : ""}`}>
+        <div className="heroGlow heroGlowA" />
+        <div className="heroGlow heroGlowB" />
+        <div className="heroMesh" />
+        <div className="candidateHomeHeroInner">
+          <p className="heroKicker">Your SkillMesh home</p>
+          <h1>
+            Welcome back, <span className="gradientText">{displayName}</span>
+          </h1>
+          <p className="homeSubtitle candidateHomeSubtitle">
+            Discover roles matched to your profile, search openings, and manage applications in one place.
+          </p>
+          <div className="candidateQuickActions">
+            <a className="candidateQuickChip" href="#nearby">Jobs near you</a>
+            <a className="candidateQuickChip" href="#for-you">Top matches</a>
+            <a className="candidateQuickChip" href="#search">Search</a>
+            <Link className="candidateQuickChip" to="/candidate">Profile & resume</Link>
+          </div>
+        </div>
+      </section>
+
+      {status && <p className="success candidateHomeBanner">{status}</p>}
+      {error && <p className="error candidateHomeBanner">{error}</p>}
+
+      <section className="homeSection candidateStatsSection">
+        <div className="candidateStatGrid">
+          <article className="candidateStatCard">
+            <span className="candidateStatValue">{profile?.years_experience ?? "—"}</span>
+            <span className="candidateStatLabel">Years experience (profile)</span>
+          </article>
+          <article className="candidateStatCard">
+            <span className="candidateStatValue">{recommended.length}</span>
+            <span className="candidateStatLabel">Personalized matches</span>
+          </article>
+          <article className="candidateStatCard">
+            <span className="candidateStatValue">{applications.length}</span>
+            <span className="candidateStatLabel">Applications</span>
+          </article>
+        </div>
+      </section>
+
+      <section className="homeSection" id="nearby">
+        <h2>Jobs near you</h2>
+        <p className="muted candidateSectionLead">Filter the public feed by postcode or suburb fragment.</p>
+        <div className="postcodeBox candidatePostcodeBox">
+          <input
+            placeholder="Postcode or location keyword"
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value)}
+          />
+          <button className="searchButton" type="button" onClick={viewNearbyJobs} disabled={loadingJobs}>
+            {loadingJobs ? "Loading…" : "Show jobs"}
+            <span>→</span>
+          </button>
+        </div>
+        {jobsError && <p className="error">{jobsError}</p>}
+        {nearbyJobs.length > 0 && (
+          <div className="candidateJobCardList">
+            {nearbyJobs.map((j) => (
+              <article className="candidateJobCard" key={j.id}>
+                <div>
+                  <h4>{j.title}</h4>
+                  <div className="jobMeta">
+                    <span>{j.location || "Location TBD"}</span>
+                    <span>{j.work_mode}</span>
+                  </div>
+                </div>
+                <button type="button" className="modernBtn modernBtnSm" onClick={() => applyToJob(j.id)}>
+                  Apply
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="homeSection" id="for-you">
+        <h2>Recommended for you</h2>
+        <p className="muted candidateSectionLead">Based on your skills, experience, and preferences.</p>
+        {loadingRecs ? (
+          <p className="muted">Loading recommendations…</p>
+        ) : recommended.length === 0 ? (
+          <p className="muted">Complete your profile and skills in Profile & tools to improve matches.</p>
+        ) : (
+          <div className="candidateJobCardList">
+            {recommended.map((r) => (
+              <article className="candidateJobCard candidateJobCardRec" key={r.job_id}>
+                <div>
+                  <h4>Job #{r.job_id}</h4>
+                  <div className="jobMeta">
+                    <span>
+                      Score{" "}
+                      {r.score != null && Number(r.score) <= 1
+                        ? `${Math.round(Number(r.score) * 100)}%`
+                        : `${Math.round(Number(r.score || 0))}%`}
+                    </span>
+                    <span>{(r.explanation?.matched_skills || []).join(", ") || "Skills align"}</span>
+                  </div>
+                </div>
+                <button type="button" className="modernBtn modernBtnSm" onClick={() => applyToJob(r.job_id)}>
+                  Apply
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="homeSection" id="search">
+        <h2>Search jobs</h2>
+        <p className="muted candidateSectionLead">Keyword search across open roles.</p>
+        <div className="candidateSearchRow">
+          <input
+            className="authInput candidateSearchInput"
+            placeholder="e.g. React, nursing, data analyst…"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+          <button type="button" className="modernBtn" onClick={runJobSearch}>
+            Search
+          </button>
+        </div>
+        {searchResults.length > 0 && (
+          <div className="candidateJobCardList">
+            {searchResults.map((j) => (
+              <article className="candidateJobCard" key={j.id}>
+                <div>
+                  <h4>{j.title}</h4>
+                  <div className="jobMeta">
+                    <span>{j.location || "—"}</span>
+                    <span>{j.work_mode}</span>
+                  </div>
+                </div>
+                <button type="button" className="modernBtn modernBtnSm" onClick={() => applyToJob(j.id)}>
+                  Apply
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="homeSection">
+        <h2>Recent applications</h2>
+        {applications.length === 0 ? (
+          <p className="muted">No applications yet — explore matches above.</p>
+        ) : (
+          <div className="candidateAppList">
+            {applications.slice(0, 6).map((a) => (
+              <div className="candidateAppRow" key={a.id}>
+                <span className="candidateAppJob">Job #{a.job}</span>
+                <span className="candidateAppStatus">{a.status}</span>
+                <span className="candidateAppDate">{a.created_at ? String(a.created_at).slice(0, 10) : "—"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <footer className="homeFooter">
+        <p>© {new Date().getFullYear()} SkillMesh · Signed in as {user?.email}</p>
+      </footer>
+    </main>
+  );
+}
+
 function CandidateDashboard() {
   const [profile, setProfile] = useState({
     full_name: "",
@@ -590,7 +1262,9 @@ function CandidateDashboard() {
   }
 
   return (
-    <div className="card">
+    <div className="homePage candidateDashboardPage">
+      <CandidateMemberHeader />
+      <div className="candidateDashboardInner card">
       <h2>Candidate Dashboard</h2>
       {status && <p className="success">{status}</p>}
       {error && <p className="error">{error}</p>}
@@ -699,6 +1373,7 @@ function CandidateDashboard() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -923,6 +1598,17 @@ function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!user || user.role !== "candidate") return;
+    const step = user?.candidate_onboarding?.onboarding_step;
+    if (step === "resume") navigate("/onboarding/work-experience");
+    if (step === "categories") navigate("/onboarding/categories");
+  }, [user, navigate]);
+
+  if (user?.role === "candidate" && user?.candidate_onboarding?.onboarding_step === "done") {
+    return <CandidateHomePage />;
+  }
+
   async function viewNearbyJobs() {
     setJobsError("");
     setLoadingJobs(true);
@@ -1096,7 +1782,8 @@ function Home() {
         {!user && <Link to="/login">Login</Link>}
         {!user && <Link to="/register">Register</Link>}
         {user && <button onClick={logout}>Logout ({user.email})</button>}
-        {user?.role === "candidate" && <Link to="/candidate">Candidate Portal</Link>}
+        {user?.role === "candidate" && <Link to="/">Candidate home</Link>}
+        {user?.role === "candidate" && <Link to="/candidate">Profile & tools</Link>}
         {user?.role === "employer" && <Link to="/employer">Employer Portal</Link>}
       </div>
     </div>
@@ -1109,7 +1796,30 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/candidate" element={<Protected roles={["candidate"]}><CandidateDashboard /></Protected>} />
+      <Route
+        path="/onboarding/work-experience"
+        element={
+          <CandidateOnboardingRoute page="work_experience">
+            <CandidateOnboardingWorkExperience />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/onboarding/categories"
+        element={
+          <CandidateOnboardingRoute page="categories">
+            <CandidateCategoryOnboarding />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/candidate"
+        element={
+          <CandidateOnboardingRoute page="dashboard">
+            <CandidateDashboard />
+          </CandidateOnboardingRoute>
+        }
+      />
       <Route path="/employer" element={<Protected roles={["employer"]}><EmployerDashboard /></Protected>} />
     </Routes>
   );

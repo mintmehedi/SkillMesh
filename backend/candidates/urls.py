@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     CandidateListView,
+    CandidateOnboardingAdvanceView,
     CandidateProfileUpsertView,
     CandidateSearchView,
     JobCategoryListView,
@@ -19,4 +20,5 @@ urlpatterns = [
     path("work-experience/", WorkExperienceBulkView.as_view(), name="work-experience"),
     path("resume/upload", ResumeUploadView.as_view(), name="resume-upload"),
     path("resume/reprocess/<int:resume_id>", ResumeReprocessView.as_view(), name="resume-reprocess"),
+    path("onboarding/advance", CandidateOnboardingAdvanceView.as_view(), name="candidate-onboarding-advance"),
 ]
