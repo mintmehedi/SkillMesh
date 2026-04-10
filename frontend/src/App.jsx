@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "./auth";
 import { api } from "./api";
+import companyLogo from "./assets/company-logo.svg";
 import "./App.css";
 
 function Protected({ roles, children }) {
@@ -490,6 +491,23 @@ function EmployerDashboard() {
 
 function Home() {
   const { user, logout } = useAuth();
+  if (!user) {
+    return (
+      <main className="landing">
+        <section className="landingCard">
+          <img className="landingLogo" src={companyLogo} alt="SkillMesh logo" />
+          <h1>SkillMesh</h1>
+          <p className="landingSubtitle">
+            Intelligent talent matching for candidates and employers.
+          </p>
+          <div className="landingActions">
+            <Link className="btnLink" to="/register">Sign up</Link>
+            <Link className="btnGhost" to="/login">Log in</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
   return (
     <div className="card">
       <h1>SkillMesh</h1>
