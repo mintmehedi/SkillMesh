@@ -1,8 +1,11 @@
-import { Navigate, Route, Routes, Link } from "react-router-dom";
+import { Navigate, Route, Routes, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 import { useAuth } from "./auth";
 import { api } from "./api";
-import companyLogo from "./assets/company-logo.svg";
+import ldLogo from "./assets/ld.png";
 import "./App.css";
 
 function Protected({ roles, children }) {
@@ -13,14 +16,48 @@ function Protected({ roles, children }) {
   return children;
 }
 
+function EyeIcon({ open }) {
+  if (open) {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path
+          d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 3.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="M3.5 2.5 21.5 20.5l-1.4 1.4-3.2-3.2A12.9 12.9 0 0 1 12 20c-6.5 0-10-6-10-6a19 19 0 0 1 4.4-4.8L2.1 3.9 3.5 2.5Zm5.7 8.5a3.2 3.2 0 0 0 4.3 4.3L9.2 11Zm2.8-7c6.5 0 10 6 10 6a18.4 18.4 0 0 1-3.8 4.4l-1.5-1.5a16.2 16.2 0 0 0 1.9-1.9s-3-4-8.6-4c-1 0-1.9.1-2.7.4L6 5.8c1.7-.8 3.8-1.3 6-1.3Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function AuthBrand() {
+  return (
+    <div className="authBrand">
+      <img src={ldLogo} alt="SkillMesh logo" />
+      <div>
+        <strong>SkillMesh</strong>
+        <small>Intelligent Talent Matching</small>
+      </div>
+    </div>
+  );
+}
+
 function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   return (
     <form
-      className="card"
+      className="card authCard fadeInUp"
       onSubmit={async (e) => {
         e.preventDefault();
         setError("");
@@ -31,22 +68,184 @@ function LoginPage() {
         }
       }}
     >
+      <AuthBrand />
       <h2>Login</h2>
       {error && <p className="error">{error}</p>}
-      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button>Login</button>
+      <input className="authInput" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <div className="passwordFieldWrap">
+        <input
+          className="authInput authInputWithToggle"
+          placeholder="Password"
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          className="passwordToggleBtn"
+          type="button"
+          onClick={() => setShowPassword((prev) => !prev)}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+        >
+          <EyeIcon open={showPassword} />
+        </button>
+      </div>
+      <button className="modernBtn" type="submit">Login</button>
     </form>
   );
 }
 
 function RegisterPage() {
   const { register } = useAuth();
-  const [form, setForm] = useState({ email: "", username: "", password: "", role: "candidate" });
+  const [searchParams] = useSearchParams();
+  const roleFromQuery = searchParams.get("role");
+  const initialRole = roleFromQuery === "employer" ? "employer" : "candidate";
+  const [form, setForm] = useState({
+    role: initialRole,
+    email: "",
+    username: "",
+    password: "",
+    password_confirm: "",
+    first_name: "",
+    last_name: "",
+    date_of_birth: "",
+    postcode: "",
+    suburb: "",
+    location_query: "",
+    country: "",
+    country_code: "",
+    mobile_number: "",
+  });
   const [error, setError] = useState("");
+  const [countrySuggestions, setCountrySuggestions] = useState([]);
+  const [postcodeSuggestions, setPostcodeSuggestions] = useState([]);
+  const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState({ state: "idle", message: "" });
+  const [manualUsernameEdit, setManualUsernameEdit] = useState(false);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const passwordRules = {
+    minLength: form.password.length >= 8,
+    specialChar: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(form.password),
+  };
+  const passwordValid = passwordRules.minLength && passwordRules.specialChar;
+  const usernameValidFormat = /^[A-Za-z0-9_]{3,20}$/.test(form.username.trim());
+  const confirmMatches = form.password_confirm.length > 0 && form.password === form.password_confirm;
+  const dobValid = Boolean(form.date_of_birth);
+
+  useEffect(() => {
+    if (form.role !== "candidate") {
+      return;
+    }
+    if (manualUsernameEdit) {
+      return;
+    }
+    const localPart = form.email.split("@")[0] || "";
+    const suggested = localPart
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 20);
+    setForm((prev) => ({ ...prev, username: suggested }));
+  }, [form.email, form.role, manualUsernameEdit]);
+
+  useEffect(() => {
+    if (form.role !== "candidate") {
+      return;
+    }
+    const username = form.username.trim();
+    if (!username) {
+      setUsernameStatus({ state: "idle", message: "" });
+      return;
+    }
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+      setUsernameStatus({
+        state: "invalid",
+        message: "Use 3-20 chars: letters, numbers, underscore.",
+      });
+      return;
+    }
+    setUsernameStatus({ state: "checking", message: "Checking availability..." });
+    const t = setTimeout(async () => {
+      try {
+        const res = await api(
+          `/api/auth/meta/username-availability?username=${encodeURIComponent(username)}`,
+          { withAuth: false },
+        );
+        if (res.available) {
+          setUsernameStatus({ state: "available", message: "Username is available." });
+          return;
+        }
+        const reasonText = res.reason === "taken" ? "Username is already taken." : "Invalid username format.";
+        setUsernameStatus({ state: "taken", message: reasonText });
+      } catch {
+        setUsernameStatus({ state: "error", message: "Could not verify username right now." });
+      }
+    }, 320);
+    return () => clearTimeout(t);
+  }, [form.username, form.role]);
+
+  useEffect(() => {
+    const q = form.country.trim();
+    if (form.role !== "candidate" || q.length < 1 || (form.country_code && q.length > 0)) {
+      setCountrySuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const rows = await api(`/api/auth/meta/countries?q=${encodeURIComponent(q)}`, { withAuth: false });
+        setCountrySuggestions(rows);
+      } catch {
+        setCountrySuggestions([]);
+      }
+    }, 220);
+    return () => clearTimeout(t);
+  }, [form.country, form.role, form.country_code]);
+
+  useEffect(() => {
+    const q = form.location_query.trim();
+    if (
+      form.role !== "candidate" ||
+      q.length < 1 ||
+      (form.suburb && (form.location_query === `${form.suburb} - ${form.postcode}` || form.location_query === form.suburb))
+    ) {
+      setPostcodeSuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const rows = await api(
+          `/api/auth/meta/au-postcodes?q=${encodeURIComponent(q)}&country_code=${encodeURIComponent(form.country_code || "")}`,
+          { withAuth: false },
+        );
+        setPostcodeSuggestions(rows);
+      } catch {
+        setPostcodeSuggestions([]);
+      }
+    }, 220);
+    return () => clearTimeout(t);
+  }, [form.location_query, form.country_code, form.role]);
+
+  const candidateFormValid =
+    emailValid &&
+    usernameValidFormat &&
+    usernameStatus.state === "available" &&
+    passwordValid &&
+    confirmMatches &&
+    dobValid &&
+    form.first_name.trim() &&
+    form.last_name.trim() &&
+    form.country.trim() &&
+    form.suburb.trim() &&
+    form.postcode.trim() &&
+    form.mobile_number.trim();
+
   return (
     <form
-      className="card"
+      className="card authCard registerShell fadeInUp"
       onSubmit={async (e) => {
         e.preventDefault();
         setError("");
@@ -57,16 +256,219 @@ function RegisterPage() {
         }
       }}
     >
-      <h2>Register</h2>
+      <AuthBrand />
+      <h2>{form.role === "candidate" ? "Create Candidate Account" : "Create Employer Account"}</h2>
+      <p className="muted registerIntro">
+        {form.role === "candidate"
+          ? "Tell us a bit about yourself so we can personalize your job matches."
+          : "Set up your employer account to post jobs and find talent."}
+      </p>
       {error && <p className="error">{error}</p>}
-      <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      <input placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-      <input placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-      <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-        <option value="candidate">Candidate</option>
-        <option value="employer">Employer</option>
-      </select>
-      <button>Create account</button>
+      <p className="muted">Signing up as <strong>{form.role === "candidate" ? "Candidate" : "Employer"}</strong></p>
+      {form.role === "candidate" ? (
+        <>
+          <h4 className="registerSectionTitle">Account details</h4>
+          <input
+            className={`authInput authInputLg ${form.email && !emailValid ? "inputError" : ""}`}
+            placeholder="Email address"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          {form.email && !emailValid && <p className="fieldHelp fieldHelpError">Enter a valid email (example@domain.com).</p>}
+          <input
+            className={`authInput authInputLg ${form.username && !usernameValidFormat ? "inputError" : ""}`}
+            placeholder="Username"
+            value={form.username}
+            onChange={(e) => {
+              setManualUsernameEdit(true);
+              setForm({ ...form, username: e.target.value });
+            }}
+          />
+          {usernameStatus.message && (
+            <p
+              className={`fieldHelp ${
+                usernameStatus.state === "available"
+                  ? "fieldHelpSuccess"
+                  : usernameStatus.state === "checking"
+                    ? "fieldHelpMuted"
+                    : "fieldHelpError"
+              }`}
+            >
+              {usernameStatus.message}
+            </p>
+          )}
+          <div className="grid">
+            <div className="passwordFieldWrap">
+              <input
+                className="authInput authInputWithToggle"
+                placeholder="Password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
+              <button
+                className="passwordToggleBtn"
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
+            <div className="passwordFieldWrap">
+              <input
+                className="authInput authInputWithToggle"
+                placeholder="Confirm password"
+                type={showPasswordConfirm ? "text" : "password"}
+                value={form.password_confirm}
+                onChange={(e) => setForm({ ...form, password_confirm: e.target.value })}
+              />
+              <button
+                className="passwordToggleBtn"
+                type="button"
+                onClick={() => setShowPasswordConfirm((prev) => !prev)}
+                aria-label={showPasswordConfirm ? "Hide confirm password" : "Show confirm password"}
+              >
+                <EyeIcon open={showPasswordConfirm} />
+              </button>
+            </div>
+          </div>
+          <div className="passwordRules">
+            <span className={passwordRules.minLength ? "ruleOk" : "rulePending"}>At least 8 characters</span>
+            <span className={passwordRules.specialChar ? "ruleOk" : "rulePending"}>At least 1 special character</span>
+            <span className={confirmMatches ? "ruleOk" : "rulePending"}>Passwords match</span>
+          </div>
+
+          <h4 className="registerSectionTitle">Personal details</h4>
+          <div className="grid">
+            <input className="authInput" placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+            <input className="authInput" placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+          </div>
+          <div className="grid">
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                className="dobPicker"
+                label="Date of birth"
+                disableFuture
+                minDate={dayjs("1940-01-01")}
+                maxDate={dayjs().subtract(13, "year")}
+                value={form.date_of_birth ? dayjs(form.date_of_birth) : null}
+                onChange={(value) =>
+                  setForm({ ...form, date_of_birth: value && value.isValid() ? value.format("YYYY-MM-DD") : "" })
+                }
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    className: "muiDobInput",
+                  },
+                  popper: {
+                    className: "dobPopper",
+                  },
+                }}
+              />
+            </LocalizationProvider>
+            <input className="authInput" placeholder="Mobile number" value={form.mobile_number} onChange={(e) => setForm({ ...form, mobile_number: e.target.value })} />
+          </div>
+
+          <h4 className="registerSectionTitle">Location details</h4>
+          <input
+            className="authInput authInputLg"
+            placeholder="Country (start typing)"
+            value={form.country}
+            onChange={(e) =>
+              setForm({ ...form, country: e.target.value, country_code: "", location_query: "", suburb: "", postcode: "" })
+            }
+            onFocus={() => setShowCountrySuggestions(true)}
+            onBlur={() => setTimeout(() => setShowCountrySuggestions(false), 140)}
+          />
+          {showCountrySuggestions && countrySuggestions.length > 0 && (
+            <div className="suggestionBox">
+              {countrySuggestions.map((c) => (
+                <button
+                  key={`${c.name}-${c.code}`}
+                  type="button"
+                  onClick={() => {
+                    setForm({
+                      ...form,
+                      country: c.name,
+                      country_code: c.code,
+                      location_query: "",
+                      suburb: "",
+                      postcode: "",
+                    });
+                    setCountrySuggestions([]);
+                    setShowCountrySuggestions(false);
+                  }}
+                >
+                  {c.name} ({c.code})
+                </button>
+              ))}
+            </div>
+          )}
+
+          <input
+            className="authInput authInputLg"
+            placeholder="Suburb or postcode (e.g. Auburn or 2144)"
+            value={form.location_query}
+            onChange={(e) =>
+              setForm({ ...form, location_query: e.target.value, suburb: "", postcode: "" })
+            }
+            onFocus={() => setShowLocationSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 140)}
+          />
+
+          {showLocationSuggestions && postcodeSuggestions.length > 0 && (
+            <div className="suggestionBox">
+              {postcodeSuggestions.map((s) => (
+                <button
+                  key={`${s.postcode}-${s.suburb}`}
+                  type="button"
+                  onClick={() => {
+                    const label = s.postcode ? `${s.suburb} - ${s.postcode}` : s.suburb;
+                    setForm({
+                      ...form,
+                      location_query: label,
+                      postcode: s.postcode || "",
+                      suburb: s.suburb || "",
+                    });
+                    setPostcodeSuggestions([]);
+                    setShowLocationSuggestions(false);
+                  }}
+                >
+                  {(s.postcode || "N/A")} - {s.suburb}{s.state ? `, ${s.state}` : ""}{s.country_code ? ` (${s.country_code})` : ""}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button className="modernBtn authSubmitBtn" type="submit" disabled={!candidateFormValid || usernameStatus.state === "checking"}>
+            {usernameStatus.state === "checking" ? "Checking username..." : "Create candidate account"}
+          </button>
+        </>
+      ) : (
+        <>
+          <input className="authInput authInputLg" placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input className="authInput authInputLg" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <div className="passwordFieldWrap">
+            <input
+              className="authInput authInputLg authInputWithToggle"
+              placeholder="Password"
+              type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <button
+              className="passwordToggleBtn"
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              <EyeIcon open={showPassword} />
+            </button>
+          </div>
+          <button className="modernBtn authSubmitBtn" type="submit">Create employer account</button>
+        </>
+      )}
     </form>
   );
 }
@@ -491,20 +893,198 @@ function EmployerDashboard() {
 
 function Home() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [postcode, setPostcode] = useState("");
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState("");
+  const [headlineIdx, setHeadlineIdx] = useState(0);
+  const [wordVisible, setWordVisible] = useState(true);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const rotatingWords = ["your next role", "the right people", "better opportunities"];
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setWordVisible(false);
+      setTimeout(() => {
+        setHeadlineIdx((prev) => (prev + 1) % rotatingWords.length);
+        setWordVisible(true);
+      }, 280);
+    }, 2600);
+    return () => clearInterval(id);
+  }, [rotatingWords.length]);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  async function viewNearbyJobs() {
+    setJobsError("");
+    setLoadingJobs(true);
+    try {
+      const feed = await api("/api/jobs/feed", { withAuth: false });
+      const normalized = postcode.trim().toLowerCase();
+      const filtered = normalized
+        ? feed.filter((j) => (j.location || "").toLowerCase().includes(normalized))
+        : feed;
+      setJobs(filtered.slice(0, 6));
+    } catch (err) {
+      setJobsError("Could not load jobs right now. Please try again.");
+    } finally {
+      setLoadingJobs(false);
+    }
+  }
+
+  function handleHeroMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / rect.width;
+    const dy = (e.clientY - cy) / rect.height;
+    setTilt({ x: dx * 8, y: dy * 8 });
+  }
+
   if (!user) {
     return (
-      <main className="landing">
-        <section className="landingCard">
-          <img className="landingLogo" src={companyLogo} alt="SkillMesh logo" />
-          <h1>SkillMesh</h1>
-          <p className="landingSubtitle">
-            Intelligent talent matching for candidates and employers.
-          </p>
-          <div className="landingActions">
-            <Link className="btnLink" to="/register">Sign up</Link>
+      <main className="homePage">
+        <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
+          <div className="homeHeaderBrand">
+            <img className="homeHeaderLogo" src={ldLogo} alt="SkillMesh logo" />
+            <span className="homeHeaderWordmark">SkillMesh</span>
+          </div>
+          <div className="homeHeaderActions">
             <Link className="btnGhost" to="/login">Log in</Link>
+            <button className="btnLink" type="button" onClick={() => setShowSignupModal(true)}>
+              Sign up
+            </button>
+          </div>
+        </header>
+
+        <section
+          className="homeHero"
+          onMouseMove={handleHeroMove}
+          onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+        >
+          <div className="heroGlow heroGlowA" />
+          <div className="heroGlow heroGlowB" />
+          <div className="heroMesh" />
+          <div
+            className="heroInner"
+            style={{
+              transform: `rotateX(${-tilt.y}deg) rotateY(${tilt.x}deg) translateZ(0)`,
+            }}
+          >
+            <p className="heroKicker">AI-Powered Hiring Platform</p>
+            <h1>
+              Match with{" "}
+              <span className={`gradientText ${wordVisible ? "wordIn" : "wordOut"}`}>
+                {rotatingWords[headlineIdx]}
+              </span>
+            </h1>
+            <p className="homeSubtitle">
+              Search opportunities near you and match with jobs aligned to your skills.
+            </p>
+            <div className="postcodeBox">
+              <input
+                placeholder="Enter postcode (e.g. 2500)"
+                value={postcode}
+                onChange={(e) => setPostcode(e.target.value)}
+              />
+              <button className="searchButton" onClick={viewNearbyJobs} disabled={loadingJobs}>
+                {loadingJobs ? "Searching..." : "Find Jobs Near Me"}
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+          {jobsError && <p className="error">{jobsError}</p>}
+          {jobs.length > 0 && (
+            <div className="jobPreviewList">
+              {jobs.map((j) => (
+                <article className="jobRow" key={j.id}>
+                  <h4>{j.title}</h4>
+                  <div className="jobMeta">
+                    <span>{j.location || "Location TBD"}</span>
+                    <span>{j.work_mode}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="homeSection">
+          <h2>How SkillMesh Works</h2>
+          <div className="howVisual">
+            <article className="howCard">
+              <span className="howBadge">1</span>
+              <h4>Create your account</h4>
+              <p>Sign up in minutes as candidate or employer.</p>
+            </article>
+            <div className="howArrow">→</div>
+            <article className="howCard">
+              <span className="howBadge">2</span>
+              <h4>Build your profile</h4>
+              <p>Upload resume and experience for smarter matching.</p>
+            </article>
+            <div className="howArrow">→</div>
+            <article className="howCard">
+              <span className="howBadge">3</span>
+              <h4>Get top matches</h4>
+              <p>Explore curated jobs or candidates instantly.</p>
+            </article>
           </div>
         </section>
+
+        <footer className="homeFooter">
+          <p>© {new Date().getFullYear()} SkillMesh. Connecting skills with opportunities.</p>
+        </footer>
+
+        {showSignupModal && (
+          <div className="modalOverlay" onClick={() => setShowSignupModal(false)}>
+            <div className="roleModal" onClick={(e) => e.stopPropagation()}>
+              <h3>Sign up as</h3>
+              <p>Choose your account type to continue.</p>
+              <div className="roleChoices">
+                <button
+                  type="button"
+                  className="roleChoiceBtn"
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    navigate("/register?role=candidate");
+                  }}
+                >
+                  <span className="roleEmoji">👤</span>
+                  <span>
+                    <strong>Candidate</strong>
+                    <small>Find roles matched to your profile</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="roleChoiceBtn"
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    navigate("/register?role=employer");
+                  }}
+                >
+                  <span className="roleEmoji">🏢</span>
+                  <span>
+                    <strong>Employer</strong>
+                    <small>Post jobs and hire faster</small>
+                  </span>
+                </button>
+              </div>
+              <button className="modalCloseBtn" type="button" onClick={() => setShowSignupModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     );
   }

@@ -11,6 +11,17 @@ from candidates.models import CandidateProfile
 User = get_user_model()
 
 _PASSWORD_SPECIAL_RE = re.compile(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]')
+_AU_POSTCODE_RE = re.compile(r"^\d{4}$")
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,20}$")
+
+
+def username_validation_reason(username):
+    value = (username or "").strip()
+    if not _USERNAME_RE.match(value):
+        return "invalid_format"
+    if User.objects.filter(username__iexact=value).exists():
+        return "taken"
+    return None
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -30,6 +41,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class CandidateRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    username = serializers.CharField(min_length=3, max_length=20)
 
     def validate_email(self, value):
         email = value.strip().lower()
@@ -43,6 +55,7 @@ class CandidateRegisterSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150)
     date_of_birth = serializers.DateField()
     postcode = serializers.CharField(max_length=20)
+    suburb = serializers.CharField(max_length=120)
     country = serializers.CharField(max_length=120)
     mobile_number = serializers.CharField(max_length=32)
 
@@ -54,28 +67,36 @@ class CandidateRegisterSerializer(serializers.Serializer):
             )
         return value
 
+    def validate_username(self, value):
+        normalized = value.strip()
+        reason = username_validation_reason(normalized)
+        if reason == "invalid_format":
+            raise serializers.ValidationError(
+                "Username must be 3-20 characters and contain only letters, numbers, and underscores."
+            )
+        if reason == "taken":
+            raise serializers.ValidationError("This username is already taken.")
+        return normalized
+
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+        if not _AU_POSTCODE_RE.match(attrs["postcode"].strip()):
+            raise serializers.ValidationError({"postcode": "Enter a valid 4-digit Australian postcode."})
         return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
         email = validated_data.pop("email")
+        username = validated_data.pop("username")
         first_name = validated_data.pop("first_name")
         last_name = validated_data.pop("last_name")
         date_of_birth = validated_data.pop("date_of_birth")
         postcode = validated_data.pop("postcode")
+        suburb = validated_data.pop("suburb")
         country = validated_data.pop("country")
         mobile_number = validated_data.pop("mobile_number")
-
-        username_base = email.split("@")[0][:30] or "user"
-        username = username_base
-        n = 0
-        while User.objects.filter(username=username).exists():
-            n += 1
-            username = f"{username_base}{n}"[:150]
 
         user = User(
             email=email,
@@ -96,6 +117,7 @@ class CandidateRegisterSerializer(serializers.Serializer):
             country=country,
             mobile_number=mobile_number,
             contact=mobile_number,
+            location=suburb,
             onboarding_step=CandidateProfile.OnboardingStep.RESUME,
         )
         return user
