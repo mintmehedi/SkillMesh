@@ -1,7 +1,7 @@
 body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
-  background: #f7f7fb;
+  background: linear-gradient(180deg, #f7f7fb 0%, #eef3ff 100%);
 }
 
 .card {
@@ -11,6 +11,62 @@ body {
   padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.landing {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.landingCard {
+  width: min(760px, 96vw);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(20, 40, 120, 0.12);
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.landingLogo {
+  width: 220px;
+  height: auto;
+  margin-bottom: 0.25rem;
+}
+
+.landingSubtitle {
+  color: #475569;
+  margin: 0.5rem auto 1.25rem;
+}
+
+.landingActions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btnLink,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btnLink {
+  background: #1f3bd4;
+  color: #fff;
+}
+
+.btnGhost {
+  border: 1px solid #c7d2fe;
+  color: #1e293b;
+  background: #f8faff;
 }
 
 .row {
