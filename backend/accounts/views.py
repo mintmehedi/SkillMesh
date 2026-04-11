@@ -150,6 +150,75 @@ class CityAutocompleteView(views.APIView):
         return Response(cities)
 
 
+class PlaceSearchAutocompleteView(views.APIView):
+    """
+    Global place suggestions (OpenStreetMap Nominatim) for job search and similar UIs.
+    Clients should debounce requests (Nominatim usage policy).
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 3:
+            return Response([])
+        try:
+            rows = _http_json(
+                "https://nominatim.openstreetmap.org/search"
+                f"?format=jsonv2&addressdetails=1&limit=10&q={quote(q)}"
+            )
+        except Exception:
+            return Response([])
+        if not isinstance(rows, list):
+            return Response([])
+        out = []
+        seen_labels = set()
+        for row in rows:
+            label = (row.get("display_name") or "").strip()
+            if not label or label.lower() in seen_labels:
+                continue
+            seen_labels.add(label.lower())
+            addr = row.get("address") or {}
+            terms = []
+            term_seen = set()
+
+            def add_term(s):
+                s = (s or "").strip()
+                if len(s) < 2:
+                    return
+                low = s.lower()
+                if low in term_seen:
+                    return
+                term_seen.add(low)
+                terms.append(low)
+
+            for key in (
+                "city",
+                "town",
+                "village",
+                "municipality",
+                "hamlet",
+                "suburb",
+                "county",
+                "state",
+                "region",
+                "postcode",
+                "country",
+            ):
+                add_term(addr.get(key))
+            lat = row.get("lat")
+            lon = row.get("lon")
+            try:
+                lat_f = float(lat) if lat is not None else None
+                lon_f = float(lon) if lon is not None else None
+            except (TypeError, ValueError):
+                lat_f = lon_f = None
+            out.append({"label": label, "lat": lat_f, "lon": lon_f, "terms": terms})
+            if len(out) >= 8:
+                break
+        return Response(out)
+
+
 class AuPostcodeAutocompleteView(views.APIView):
     permission_classes = [permissions.AllowAny]
 

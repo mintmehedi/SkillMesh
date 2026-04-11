@@ -1,5 +1,5 @@
 """
-PDF text extraction tuned for résumés: reading order + fallback.
+PDF text extraction tuned for resumes: reading order + fallback.
 
 PyMuPDF (fitz) usually outperforms plain pypdf on multi-column and ordered blocks.
 """

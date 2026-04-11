@@ -2,10 +2,9 @@ import { Link } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { formatApiError, humanizeFieldErrorMessage, parseApiValidationErrors } from "./apiErrors";
-import { BackButton } from "./BackButton";
 import { formatPostedShort, formatWorkModeLabel } from "./jobFormatters";
 import { SiteDatePicker } from "./SiteDatePicker";
-import ldLogo from "./assets/ld.png";
+import { SiteBrandBar } from "./SiteBrandBar";
 
 const JOB_FIELD_IDS = {
   title: "ej-title",
@@ -469,25 +468,8 @@ export function EmployerJobsPage() {
       <div className="employerJobsAmbient" aria-hidden="true" />
       <div className="employerJobsFrame fadeInUp">
         <header className="employerJobsHeader">
-          <div className="employerJobsTopRow">
-            <div className="employerJobsBackCell">
-              <BackButton fallbackTo="/" />
-            </div>
-            <div className="employerJobsBrandCell">
-              <Link
-                to="/"
-                className="authBrand authBrandLink"
-                aria-label="SkillMesh — employer home"
-                title="Employer home"
-              >
-                <img src={ldLogo} alt="" />
-                <div>
-                  <strong>SkillMesh</strong>
-                  <small>Intelligent Talent Matching</small>
-                </div>
-              </Link>
-            </div>
-            <div className="employerJobsBackSpacer" aria-hidden="true" />
+          <div className="employerJobsHeaderBrandRow">
+            <SiteBrandBar fallbackTo="/" />
           </div>
           <h1 className="employerJobsTitle">Job listings</h1>
           <p className="employerJobsLead">

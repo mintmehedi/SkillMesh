@@ -7,6 +7,7 @@ from .views import (
     CountryAutocompleteView,
     EmailLoginView,
     MeView,
+    PlaceSearchAutocompleteView,
     RegisterCandidateView,
     RegisterView,
     StateRegionAutocompleteView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("meta/countries", CountryAutocompleteView.as_view(), name="meta-countries"),
     path("meta/states", StateRegionAutocompleteView.as_view(), name="meta-states"),
     path("meta/cities", CityAutocompleteView.as_view(), name="meta-cities"),
+    path("meta/places", PlaceSearchAutocompleteView.as_view(), name="meta-places"),
     path("meta/au-postcodes", AuPostcodeAutocompleteView.as_view(), name="meta-au-postcodes"),
     path(
         "meta/username-availability",

@@ -216,7 +216,7 @@ def fetch_llm_resume_enrichment(raw_text: str) -> tuple[list[dict[str, Any]], li
         '"description":"string","start_date":"YYYY-MM-DD or null","end_date":"YYYY-MM-DD or null","is_current":false}]}'
     )
     user_msg = (
-        "From the résumé plain text below, extract (1) paid jobs/internships as work_experiences, "
+        "From the resume plain text below, extract (1) paid jobs/internships as work_experiences, "
         "(2) formal education as studies (university, TAFE, college, bootcamp with credential). "
         "Return one JSON object with exactly two keys: work_experiences (array, max 8, most recent first) "
         "and studies (array, max 8, most recent first). "
@@ -224,13 +224,13 @@ def fetch_llm_resume_enrichment(raw_text: str) -> tuple[list[dict[str, Any]], li
         "For studies: institution, degree (e.g. Bachelor of Science), field_of_study, major (if distinct), "
         "description, start_date, end_date, is_current if still enrolled. "
         "Use null for unknown dates; year-only as YYYY-01-01. Do not invent names not in the text. "
-        f"Example shape: {schema}\n\n---RÉSUMÉ TEXT---\n{text}"
+        f"Example shape: {schema}\n\n---RESUME TEXT---\n{text}"
     )
     messages = [
         {
             "role": "system",
             "content": (
-                "You convert noisy résumé text into strict JSON with work_experiences and studies. "
+                "You convert noisy resume text into strict JSON with work_experiences and studies. "
                 "Respond with JSON only, no markdown fences."
             ),
         },
