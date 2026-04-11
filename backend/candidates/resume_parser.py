@@ -1,11 +1,30 @@
 import re
+import unicodedata
 from datetime import datetime
 from io import BytesIO
 
 from docx import Document
-from pypdf import PdfReader
 
 from .ocr_client import extract_text_with_cloud_ocr
+from .pdf_extract import extract_pdf_text
+
+
+def normalize_extracted_resume_text(text: str) -> str:
+    """Join hyphenated line wraps and tidy whitespace after PDF/OCR extraction (before heuristics)."""
+    if not (text or "").strip():
+        return text or ""
+    t = unicodedata.normalize("NFKC", text)
+    t = re.sub(r"-\s*\r?\n\s*", "", t)
+    t = re.sub(r"\u00ad\s*\r?\n?\s*", "", t)
+    t = re.sub(r"\r\n|\r", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"[ \t\f\v]+", " ", t)
+    t = re.sub(r" *\n *", "\n", t)
+    return t.strip()
+
+
+# Backward-compatible name (image OCR path).
+normalize_post_ocr_text = normalize_extracted_resume_text
 
 
 COMMON_SKILLS = [
@@ -22,11 +41,22 @@ COMMON_SKILLS = [
 ]
 
 SECTION_HEADER_RE = re.compile(
-    r"(work\s+experience|experience|employment\s+history|professional\s+experience)",
+    r"(work\s+experience|employment\s+history|professional\s+experience|professional\s+background|"
+    r"relevant\s+experience|work\s+history|career\s+history|career\s+summary|positions\s+held|"
+    r"\bemployment\b|\bexperience\b)",
     re.IGNORECASE,
 )
 SECTION_STOP_RE = re.compile(
     r"(education|skills|projects|certifications|references|summary|profile)",
+    re.IGNORECASE,
+)
+
+EDUCATION_HEADER_RE = re.compile(
+    r"^(education|academic\s+background|qualifications|academic\s+qualifications)\b",
+    re.IGNORECASE,
+)
+EDUCATION_SECTION_STOP_RE = re.compile(
+    r"^(work|employment|experience|professional\s+experience|skills|projects|certifications|references|summary|profile)\b",
     re.IGNORECASE,
 )
 
@@ -55,15 +85,21 @@ def extract_text_from_upload(uploaded_file):
     if hasattr(uploaded_file, "seek"):
         uploaded_file.seek(0)
     if name.endswith(".pdf"):
-        reader = PdfReader(BytesIO(content))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        return normalize_extracted_resume_text(extract_pdf_text(content))
     if name.endswith(".docx"):
         doc = Document(BytesIO(content))
-        return "\n".join(p.text for p in doc.paragraphs)
+        parts = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        for table in doc.tables:
+            for row in table.rows:
+                cells = [c.text.strip() for c in row.cells]
+                line = " | ".join(c for c in cells if c)
+                if line:
+                    parts.append(line)
+        return normalize_extracted_resume_text("\n".join(parts))
     if name.endswith(".jpg") or name.endswith(".jpeg") or name.endswith(".png"):
         cloud_text = extract_text_with_cloud_ocr(name, content)
         if cloud_text:
-            return cloud_text
+            return normalize_extracted_resume_text(cloud_text)
     return content.decode("utf-8", errors="ignore")
 
 
@@ -78,12 +114,15 @@ def parse_resume_text(raw_text):
             years_experience = n
             break
     work_experiences, confidence = _extract_experience_blocks(raw_text)
+    studies, edu_conf, edu_section = _extract_education_studies(raw_text)
     return {
         "skills": matched_skills,
         "education_level": education_level,
         "years_experience": years_experience,
         "work_experiences": work_experiences,
         "experience_parse_confidence": confidence,
+        "studies": studies,
+        "education_parse_confidence": edu_conf,
         "parsed_at": datetime.utcnow().isoformat(),
     }
 
@@ -420,7 +459,8 @@ def _merge_ranked_experiences(rows):
         ),
         reverse=True,
     )
-    return [row for row in merged if row.get("_score", 0) >= 0.42]
+    min_score = 0.34
+    return [row for row in merged if row.get("_score", 0) >= min_score]
 
 
 def _split_title_company(line):
@@ -454,8 +494,9 @@ def _looks_like_company(line):
 
 
 def _confidence_score(experiences, signals, section_found):
+    # No rows => no meaningful score (avoid showing "0% confidence" in the UI).
     if not experiences:
-        return 0.0
+        return None
     score = 0.25
     score += min(0.35, len(experiences) * 0.12)
     score += min(0.15, signals * 0.02)
@@ -637,7 +678,39 @@ def _month_to_number(raw):
 
 
 def _parse_company_with_date_line(line):
-    # Example: "Jungs Cleaning Ryde | 2024 MAR - 2025 SEP"
+    # Examples: "Jungs Cleaning Ryde | 2024 MAR - 2025 SEP"
+    # ATS columns: "Acme Pty Ltd    Jan 2020 - Dec 2022"
+    # Em/en dash: "TechCorp — Mar 2019 - Present"
+    line = (line or "").strip()
+    if not line:
+        return None
+
+    for sep in ("\u2014", "\u2013"):  # em dash, en dash
+        if sep in line:
+            left, right = line.split(sep, 1)
+            left, right = left.strip(), right.strip()
+            date_info = _parse_date_range(right)
+            if date_info and left and not _parse_date_range(left):
+                return {
+                    "company": left,
+                    "start_date": date_info["start_date"],
+                    "end_date": date_info["end_date"],
+                    "is_current": date_info["is_current"],
+                }
+
+    chunks = [c.strip() for c in re.split(r"\s{2,}", line) if c.strip()]
+    if len(chunks) == 2:
+        left, right = chunks[0], chunks[1]
+        if not _parse_date_range(left):
+            date_info = _parse_date_range(right)
+            if date_info and left:
+                return {
+                    "company": left,
+                    "start_date": date_info["start_date"],
+                    "end_date": date_info["end_date"],
+                    "is_current": date_info["is_current"],
+                }
+
     if "|" not in line:
         return None
     left, right = line.split("|", 1)
@@ -652,4 +725,89 @@ def _parse_company_with_date_line(line):
         "start_date": date_info["start_date"],
         "end_date": date_info["end_date"],
         "is_current": date_info["is_current"],
+    }
+
+
+def _extract_education_studies(raw_text):
+    """Pull education/study blocks from an Education section (heuristic)."""
+    lines = [_normalize_extracted_line(line) for line in raw_text.splitlines() if line.strip()]
+    start_idx = -1
+    for i, line in enumerate(lines):
+        if EDUCATION_HEADER_RE.search(_normalize_heading(line)):
+            start_idx = i + 1
+            break
+    if start_idx < 0:
+        return [], None, False
+    section_lines = []
+    for line in lines[start_idx:]:
+        if EDUCATION_SECTION_STOP_RE.search(_normalize_heading(line)):
+            break
+        section_lines.append(line)
+    if not section_lines:
+        return [], None, True
+    blob = "\n".join(section_lines)
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", blob) if p.strip()]
+    studies = []
+    for para in paragraphs[:8]:
+        row = _parse_education_paragraph(para)
+        if row:
+            row["sort_order"] = len(studies)
+            studies.append(row)
+    conf = None
+    if studies:
+        conf = round(min(1.0, 0.22 + min(0.5, len(studies) * 0.12) + 0.08), 2)
+    return studies, conf, True
+
+
+def _parse_education_paragraph(para):
+    one_line = re.sub(r"\s+", " ", para).strip()
+    if len(one_line) < 6:
+        return None
+    institution = ""
+    m = re.search(
+        r"([A-Z0-9][A-Za-z0-9\s,'&\-.]+?(?:University|College|Institute|School|Academy))\b",
+        para,
+        re.I,
+    )
+    if m:
+        institution = re.sub(r"\s+", " ", m.group(1).strip())[:255]
+    degree = ""
+    dm = re.search(
+        r"(Bachelor(?:'s)?(?:\s+of)?[^,\n|]*|B\.?S\.?c?\.?|B\.?A\.?|Master(?:'s)?(?:\s+of)?[^,\n|]*|M\.?S\.?c?\.?|M\.?A\.?|MBA|Ph\.?D\.?|Doctorate|Doctor\s+of[^,\n|]*|Diploma|Associate(?:'s)?[^,\n|]*|Graduate\s+Certificate[^,\n|]*)",
+        para,
+        re.I,
+    )
+    if dm:
+        degree = re.sub(r"\s+", " ", dm.group(0).strip())[:255]
+    field_of_study = ""
+    in_m = re.search(
+        r"\b(?:in|of)\s+([A-Za-z0-9][A-Za-z0-9\s\-&/.]+?)(?=\s*[|,]|\s+at\s|\s+—|\s+–|\s+\d{4}|\s*$)",
+        para,
+        re.I,
+    )
+    if in_m:
+        field_of_study = in_m.group(1).strip()[:255]
+    major = field_of_study
+    mj = re.search(r"Majors?[:\s]+([^,|\n]+)", para, re.I)
+    if mj:
+        major = mj.group(1).strip()[:255]
+    dr = _parse_date_range(one_line)
+    start_d = dr["start_date"] if dr else ""
+    end_d = "" if (dr and dr["is_current"]) else (dr["end_date"] if dr else "")
+    is_cur = bool(dr["is_current"]) if dr else False
+    if not institution and not degree and not field_of_study and not major:
+        if len(one_line) < 20:
+            return None
+        institution = one_line[:255]
+    desc = para.strip()[:1200] if len(para) > 200 else ""
+    return {
+        "institution": institution,
+        "degree": degree,
+        "field_of_study": field_of_study,
+        "major": major,
+        "description": desc,
+        "start_date": start_d or "",
+        "end_date": end_d or "",
+        "is_current": is_cur,
+        "sort_order": 0,
     }

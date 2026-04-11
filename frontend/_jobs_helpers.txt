@@ -1,0 +1,74 @@
+function formatWorkModeLabel(mode) {
+  if (!mode) return "";
+  const m = String(mode).toLowerCase();
+  if (m === "remote") return "Remote";
+  if (m === "hybrid") return "Hybrid";
+  if (m === "onsite") return "On-site";
+  return mode;
+}
+
+function formatPostedShort(iso) {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const days = Math.floor((Date.now() - t) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function companyAvatarLetter(companyInfo, title) {
+  const raw = (companyInfo || title || "?").trim();
+  return raw.charAt(0).toUpperCase() || "?";
+}
+
+function matchScorePercent(score) {
+  if (score == null || Number.isNaN(Number(score))) return null;
+  const n = Number(score);
+  return n <= 1 ? Math.round(n * 100) : Math.round(n);
+}
+
+const LS_SAVED_JOBS = "skillmesh_saved_job_ids";
+const LS_RECENT_SEARCHES = "skillmesh_recent_searches";
+
+function loadIdSet(key) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!Array.isArray(raw)) return new Set();
+    return new Set(raw.map((x) => Number(x)));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveIdSet(key, set) {
+  localStorage.setItem(key, JSON.stringify([...set]));
+}
+
+function loadRecentSearches() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_RECENT_SEARCHES) || "[]");
+    return Array.isArray(raw) ? raw.filter((s) => typeof s === "string").slice(0, 10) : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentSearch(q) {
+  const t = q.trim();
+  if (!t) return loadRecentSearches();
+  const prev = loadRecentSearches().filter((x) => x.toLowerCase() !== t.toLowerCase());
+  const next = [t, ...prev].slice(0, 10);
+  localStorage.setItem(LS_RECENT_SEARCHES, JSON.stringify(next));
+  return next;
+}
+
+function isRecentlyPosted(iso) {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < 4 * 86400000;
+}
+

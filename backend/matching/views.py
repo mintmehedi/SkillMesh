@@ -2,6 +2,8 @@ from rest_framework import permissions, views
 from rest_framework.response import Response
 
 from accounts.permissions import IsEmployer
+from employers.models import JobPosting
+from employers.utils_workspace import workspace_owner
 from .models import RecommendationLog
 from .services import recommend_candidates_for_job, recommend_jobs_for_candidate
 
@@ -26,6 +28,9 @@ class CandidatesForJobView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsEmployer]
 
     def get(self, request, job_id):
+        job = JobPosting.objects.filter(pk=job_id).first()
+        if not job or job.employer_id != workspace_owner(request.user).id:
+            return Response({"detail": "Job not found."}, status=404)
         results = recommend_candidates_for_job(job_id, top_n=10)
         for row in results:
             RecommendationLog.objects.create(

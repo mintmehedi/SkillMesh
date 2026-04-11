@@ -57,14 +57,19 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    const body = {
+      email: payload.email,
+      username: payload.username,
+      password: payload.password,
+      password_confirm: payload.password_confirm,
+      role: "employer",
+    };
+    if (payload.employer_invite_token) {
+      body.employer_invite_token = payload.employer_invite_token;
+    }
     await api("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({
-        email: payload.email,
-        username: payload.username,
-        password: payload.password,
-        role: "employer",
-      }),
+      body: JSON.stringify(body),
       withAuth: false,
     });
     await login(payload.email, payload.password);
