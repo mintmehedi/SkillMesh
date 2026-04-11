@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { BackButton } from "./BackButton";
 import ldLogo from "./assets/ld.png";
 
 export function CandidateMemberHeader() {
@@ -54,7 +53,6 @@ export function CandidateMemberHeader() {
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
       <div className="homeHeaderLead">
-        <BackButton className="homeHeaderBack" />
         <Link to="/" className="homeHeaderBrand candidateHeaderBrand">
           <img className="homeHeaderLogo" src={ldLogo} alt="" />
           <span className="homeHeaderWordmark">SkillMesh</span>
@@ -85,10 +83,10 @@ export function CandidateMemberHeader() {
           <Link role="menuitem" className="candidateProfileMenuItem" to="/#saved-searches" onClick={() => setMenuOpen(false)}>
             Saved searches
           </Link>
-          <Link role="menuitem" className="candidateProfileMenuItem" to="/#saved-jobs" onClick={() => setMenuOpen(false)}>
+          <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate/saved-jobs" onClick={() => setMenuOpen(false)}>
             Saved jobs
           </Link>
-          <Link role="menuitem" className="candidateProfileMenuItem" to="/#applied-jobs" onClick={() => setMenuOpen(false)}>
+          <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate/applied-jobs" onClick={() => setMenuOpen(false)}>
             Applied jobs
           </Link>
           <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate" onClick={() => setMenuOpen(false)}>

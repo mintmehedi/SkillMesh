@@ -83,9 +83,19 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 _raw_db_url = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URI")
 DATABASE_URL = (_raw_db_url or "").strip().strip('"').strip("'")
 if not DATABASE_URL:
-    raise RuntimeError(
-        "Set DATABASE_URL or SUPABASE_DB_URI in backend/.env (PostgreSQL connection URI from Supabase)."
-    )
+    # Vercel's Python build imports Django settings; DATABASE_URL must exist in the
+    # Vercel project for runtime (and for builds that run DB commands). If it is not
+    # set yet, use a parseable placeholder so the build can finish — the API will not
+    # work until you add DATABASE_URL or SUPABASE_DB_URI in the Vercel dashboard.
+    if os.environ.get("VERCEL"):
+        DATABASE_URL = (
+            "postgres://vercel_build_placeholder:vercel_build_placeholder@"
+            "127.0.0.1:5432/postgres"
+        )
+    else:
+        raise RuntimeError(
+            "Set DATABASE_URL or SUPABASE_DB_URI in backend/.env (PostgreSQL connection URI from Supabase)."
+        )
 
 is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
 try:

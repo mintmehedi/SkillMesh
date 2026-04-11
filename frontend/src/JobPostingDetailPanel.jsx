@@ -102,6 +102,8 @@ function JobStructuredSections({ job, fullPageLayout }) {
  * @param {boolean} [props.employerPreview] employer-only draft/closed preview — no apply CTA
  * @param {boolean} [props.employerViewingPublic] employer viewing a live public job — short note instead of apply/login
  * @param {boolean} [props.fullPageLayout] full-page job view — taller description, more skills visible
+ * @param {boolean} [props.bookmarkSaved] when set with onBookmarkToggle, shows save control
+ * @param {(() => void) | undefined} [props.onBookmarkToggle]
  */
 export function JobPostingDetailPanel({
   job,
@@ -113,6 +115,8 @@ export function JobPostingDetailPanel({
   employerPreview = false,
   employerViewingPublic = false,
   fullPageLayout = false,
+  bookmarkSaved = false,
+  onBookmarkToggle,
 }) {
   if (!job) return null;
 
@@ -121,19 +125,51 @@ export function JobPostingDetailPanel({
   const exp = job.required_experience != null ? Number(job.required_experience) : 0;
   const edu = (job.required_education || "").trim();
   const skillLimit = fullPageLayout ? 999 : 8;
+  const showBookmark = typeof onBookmarkToggle === "function";
 
-  return (
-    <div className={`jobsSeekDetail${fullPageLayout ? " jobsSeekDetailFullPage" : ""}`}>
-      <h4 className="jobsSeekDetailEyebrow">{employerPreview ? "Preview" : "At a glance"}</h4>
-      {showFullPageLink && job.id != null && (
-        <p className="jobsSeekDetailPermalinkWrap">
-          <Link className="jobsSeekDetailPermalink" to={`/jobs/${job.id}`}>
-            Open full page
-          </Link>
-        </p>
-      )}
-      <h3 className="jobsSeekDetailTitle">{job.title}</h3>
-      <p className="jobsSeekDetailSub">{job.company_info || "Employer"}</p>
+  const body = (
+    <>
+      <div className="jobsSeekDetailHeaderRow">
+        <div className="jobsSeekDetailHeaderMain">
+          <h4 className="jobsSeekDetailEyebrow">{employerPreview ? "Preview" : "At a glance"}</h4>
+          {showFullPageLink && job.id != null && (
+            <p className="jobsSeekDetailPermalinkWrap">
+              <Link className="jobsSeekDetailPermalink" to={`/jobs/${job.id}`}>
+                Open full page
+              </Link>
+            </p>
+          )}
+          <h3 className="jobsSeekDetailTitle">{job.title}</h3>
+          <p className="jobsSeekDetailSub">{job.company_info || "Employer"}</p>
+        </div>
+        {showBookmark ? (
+          <button
+            type="button"
+            className={`jobsSeekBookmarkBtn jobsSeekDetailBookmarkBtn ${bookmarkSaved ? "jobsSeekBookmarkBtn--saved" : ""}`}
+            title={bookmarkSaved ? "Remove from saved" : "Save job"}
+            aria-label={bookmarkSaved ? "Remove from saved" : "Save job"}
+            aria-pressed={bookmarkSaved}
+            onClick={onBookmarkToggle}
+          >
+            <svg className="jobsSeekBookmarkSvg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              {bookmarkSaved ? (
+                <path
+                  d="M6 2.75h12c.55 0 1 .45 1 1v17.45c0 .72-.78 1.17-1.4.8L12 16.35l-5.6 4.65c-.62.37-1.4-.08-1.4-.8V3.75c0-.55.45-1 1-1Z"
+                  fill="currentColor"
+                />
+              ) : (
+                <path
+                  d="M6 2.75h12c.55 0 1 .45 1 1v17.45c0 .72-.78 1.17-1.4.8L12 16.35l-5.6 4.65c-.62.37-1.4-.08-1.4-.8V3.75c0-.55.45-1 1-1Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.65"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+          </button>
+        ) : null}
+      </div>
       <div className="jobsSeekDetailTags">
         <span>{job.location || "—"}</span>
         <span>{formatWorkModeLabel(job.work_mode)}</span>
@@ -195,7 +231,7 @@ export function JobPostingDetailPanel({
         <p className="jobsSeekAppliedNote">You’ve applied to this role.</p>
       ) : typeof onApply === "function" ? (
         <button type="button" className="jobsSeekApply" onClick={onApply} disabled={applyBusy}>
-          {applyBusy ? "Sending…" : "Send application"}
+          {applyBusy ? "Submitting…" : "Apply"}
         </button>
       ) : employerViewingPublic ? (
         <p className="jobsSeekEmployerBrowseNote muted">
@@ -208,6 +244,18 @@ export function JobPostingDetailPanel({
           apply.
         </p>
       )}
+    </>
+  );
+
+  if (fullPageLayout) {
+    return <div className="jobsSeekDetail jobsSeekDetailFullPage">{body}</div>;
+  }
+
+  return (
+    <div className="jobsSeekDetail jobsSeekDetail--scrollAside">
+        <div className="jobsSeekDetailBody jobsSeekDetailBodyScroll" role="region" aria-label="Job summary and description">
+        {body}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 """
-Resize and lightly enhance résumé images before cloud OCR.
+Resize and lightly enhance resume images before cloud OCR.
 
 Uses Pillow only (no OpenCV). Safe to disable via OCR_IMAGE_PREPROCESS=false.
 """

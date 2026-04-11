@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 from django.conf import settings
 from django.db import models
@@ -12,6 +13,16 @@ class JobPostingQuerySet(models.QuerySet):
     def public_live(self):
         today = timezone.now().date()
         return self.filter(status="open").filter(Q(closing_date__isnull=True) | Q(closing_date__gte=today))
+
+
+class JobPostingManager(models.Manager):
+    """Typed manager so checkers see QuerySet helpers like ``public_live``."""
+
+    def get_queryset(self):
+        return JobPostingQuerySet(self.model, using=self._db)
+
+    def public_live(self):
+        return self.get_queryset().public_live()
 
 
 class JobCategory(models.Model):
@@ -82,7 +93,7 @@ class CompanyProfile(models.Model):
 
 
 class JobPosting(models.Model):
-    objects = models.Manager.from_queryset(JobPostingQuerySet)()
+    objects: ClassVar[JobPostingManager] = JobPostingManager()
 
     class WorkMode(models.TextChoices):
         REMOTE = "remote", "Remote"
@@ -207,4 +218,5 @@ class EmployerTeamInvite(models.Model):
         ]
 
     def __str__(self):
-        return f"EmployerTeamInvite({self.email} → org {self.organization_owner_id})"
+        org_id = getattr(self, "organization_owner_id", None)
+        return f"EmployerTeamInvite({self.email} → org {org_id})"

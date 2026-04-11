@@ -5,7 +5,7 @@ from .models import CandidateEducation, CandidateProfile, CandidateSkill, Resume
 
 
 class ResumeDocumentBriefSerializer(serializers.ModelSerializer):
-    """List/detail résumé metadata for the candidate dashboard."""
+    """List/detail resume metadata for the candidate dashboard."""
 
     file_url = serializers.SerializerMethodField()
     stored_filename = serializers.SerializerMethodField()

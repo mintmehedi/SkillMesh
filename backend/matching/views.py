@@ -12,8 +12,9 @@ class JobsForCandidateView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        results = recommend_jobs_for_candidate(request.user, top_k=10)
-        for row in results:
+        results = recommend_jobs_for_candidate(request.user)
+        # Avoid writing one DB row per job on every page load when the list is long.
+        for row in results[:40]:
             RecommendationLog.objects.create(
                 subject_type="candidate",
                 subject_id=request.user.id,

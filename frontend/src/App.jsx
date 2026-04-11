@@ -4,10 +4,14 @@ import { useAuth } from "./auth";
 import { SiteDatePicker } from "./SiteDatePicker";
 import { api, apiBlob } from "./api";
 import { BackButton } from "./BackButton";
+import { SiteBrandBar } from "./SiteBrandBar";
 import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { EmployerMemberHeader } from "./EmployerMemberHeader";
 import { JobPostingDetailPanel } from "./JobPostingDetailPanel";
 import { JobDetailPage } from "./JobDetailPage";
+import { JobApplyPage } from "./JobApplyPage";
+import { CandidateSavedJobsPage } from "./CandidateSavedJobsPage";
+import { CandidateAppliedJobsPage } from "./CandidateAppliedJobsPage";
 import { EmployerJobsPage } from "./EmployerJobsPage";
 import { EmployerHomePage } from "./EmployerHomePage";
 import { EmployerApplicationsPage } from "./EmployerApplicationsPage";
@@ -25,6 +29,7 @@ import {
   parseApiValidationErrors,
   parseIndexedListFieldErrors,
 } from "./apiErrors";
+import { LS_SAVED_JOBS, loadSavedJobIds, persistSavedJobIds } from "./savedJobs";
 
 const EMPLOYER_COMPANY_SIZE_OPTIONS = [
   ["", "Select company size"],
@@ -174,15 +179,16 @@ function LoginPage() {
         }
       }}
     >
-      {!isEmployerLogin && (
-        <div className="authTopBar">
-          <BackButton />
+      <div className="authLoginHeaderRow">
+        <div className="authLoginHeaderStart">
+          <BackButton className="homeHeaderBack" />
         </div>
-      )}
-      <div className={isEmployerLogin ? "authEmployerLoginBrandRow" : undefined}>
-        <AuthBrand />
+        <div className="authLoginHeaderBrand">
+          <AuthBrand />
+        </div>
+        <div className="authLoginHeaderEnd" aria-hidden="true" />
       </div>
-      <h2 className={isEmployerLogin ? "authEmployerLoginTitle" : undefined}>
+      <h2 className={isEmployerLogin ? "authEmployerLoginTitle" : "authCandidateLoginTitle"}>
         {isEmployerLogin ? "Employer sign in" : "Login"}
       </h2>
       {error && <p className="error">{error}</p>}
@@ -513,10 +519,15 @@ function RegisterPage() {
         }
       }}
     >
-      <div className="authTopBar">
-        <BackButton />
+      <div className="authLoginHeaderRow authRegisterHeaderRow">
+        <div className="authLoginHeaderStart">
+          <BackButton className="homeHeaderBack" />
+        </div>
+        <div className="authLoginHeaderBrand">
+          <AuthBrand />
+        </div>
+        <div className="authLoginHeaderEnd" aria-hidden="true" />
       </div>
-      <AuthBrand />
       <h2>{form.role === "candidate" ? "Create Candidate Account" : "Create Employer Account"}</h2>
       <p className="muted registerIntro">
         {form.role === "candidate"
@@ -1016,7 +1027,7 @@ function CandidateOnboardingRoute({ page, children }) {
   if (user.role !== "candidate") return <Navigate to="/" replace />;
   const step = user?.candidate_onboarding?.onboarding_step;
 
-  if (page === "dashboard") {
+  if (page === "dashboard" || page === "saved_jobs" || page === "applied_jobs") {
     if (step === "resume") return <Navigate to="/onboarding/work-experience" replace />;
     if (step === "categories") return <Navigate to="/onboarding/categories" replace />;
     return children;
@@ -1429,17 +1440,14 @@ function CandidateOnboardingWorkExperience() {
 
   return (
     <section className="card authCard onboardingCard fadeInUp">
-      <div className="onboardTop">
-        <BackButton className="onboardBackBtn" />
-        <div className="onboardBrandWrap">
-          <AuthBrand />
-        </div>
+      <div className="onboardTop onboardTopBarRow">
+        <SiteBrandBar />
         <div className="onboardTopEnd">
           <button type="button" className="btnGhost" onClick={skipStep}>Skip</button>
         </div>
       </div>
       <h2>Resume, education &amp; work experience</h2>
-      <p className="muted">Upload a résumé (PDF/JPG/PNG/DOCX) and add study and roles. We can auto-fill both from your file.</p>
+      <p className="muted">Upload a resume (PDF/JPG/PNG/DOCX) and add study and roles. We can auto-fill both from your file.</p>
       {status && <p className="success">{status}</p>}
       {error && <p className="error">{error}</p>}
 
@@ -1718,11 +1726,8 @@ function CandidateCategoryOnboarding() {
 
   return (
     <section className="card authCard onboardingCard fadeInUp">
-      <div className="onboardTop">
-        <BackButton className="onboardBackBtn" />
-        <div className="onboardBrandWrap">
-          <AuthBrand />
-        </div>
+      <div className="onboardTop onboardTopBarRow">
+        <SiteBrandBar />
         <div className="onboardTopEnd">
           <span className="onboardTopSpacer" aria-hidden="true" />
         </div>
@@ -1758,18 +1763,7 @@ function CandidateCategoryOnboarding() {
   );
 }
 
-const LS_SAVED_JOBS = "skillmesh_saved_job_ids";
 const LS_RECENT_SEARCHES = "skillmesh_recent_searches";
-
-function loadIdSet(key) {
-  try {
-    const raw = JSON.parse(localStorage.getItem(key) || "[]");
-    if (!Array.isArray(raw)) return new Set();
-    return new Set(raw.map((x) => Number(x)));
-  } catch {
-    return new Set();
-  }
-}
 
 function saveIdSet(key, set) {
   localStorage.setItem(key, JSON.stringify([...set]));
@@ -1910,9 +1904,54 @@ function JobFilterMenuOption({ label, selected, onPick }) {
   );
 }
 
+function candidateJobSearchBlobLower(j) {
+  const joinBullets = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .map((x) => String(x || "").trim())
+      .filter(Boolean)
+      .join(" ");
+  return [
+    j.title,
+    j.location,
+    j.company_info,
+    j.jd_text,
+    j.how_to_apply,
+    j.licenses_certifications,
+    formatCompensationSummary(j),
+    joinBullets(j.whats_on_offer),
+    joinBullets(j.looking_for_people_bullets),
+    joinBullets(j.looking_for_additional_bullets),
+    joinBullets(j.role_bullets),
+    joinBullets(j.why_choose_us_bullets),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function candidateJobMatchesWhere(j, locationFilter, locationSearchTerms) {
+  const blob = candidateJobSearchBlobLower(j);
+  const raw = (locationFilter || "").trim();
+  const structured = Array.isArray(locationSearchTerms) && locationSearchTerms.length > 0;
+  if (!raw && !structured) return true;
+  if (structured) {
+    return locationSearchTerms.every(
+      (t) => String(t || "").trim().length >= 2 && blob.includes(String(t).trim().toLowerCase()),
+    );
+  }
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length >= 2);
+  if (parts.length) return parts.every((p) => blob.includes(p));
+  const single = raw.toLowerCase();
+  return single.length >= 2 && blob.includes(single);
+}
+
 function CandidateHomePage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [jobCategories, setJobCategories] = useState([]);
   const [feedJobs, setFeedJobs] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
@@ -1922,8 +1961,14 @@ function CandidateHomePage() {
   const [keyword, setKeyword] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [browseMode, setBrowseMode] = useState("recommended");
+  /** When true, main list shows search API results; otherwise ranked recommendations (then feed fallback). */
+  const [showingSearchResults, setShowingSearchResults] = useState(false);
   const [locationFilter, setLocationFilter] = useState("");
+  const [locationSearchTerms, setLocationSearchTerms] = useState([]);
+  const [whereSuggestions, setWhereSuggestions] = useState([]);
+  const [whereSuggestOpen, setWhereSuggestOpen] = useState(false);
+  const [whereSuggestLoading, setWhereSuggestLoading] = useState(false);
+  const whereSuggestDebounceRef = useRef(null);
   const [workModeFilter, setWorkModeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selectedJobId, setSelectedJobId] = useState(null);
@@ -1937,10 +1982,18 @@ function CandidateHomePage() {
   const [salaryMaxK, setSalaryMaxK] = useState(350);
   const [listedFilter, setListedFilter] = useState("");
   const [hiddenJobIds, setHiddenJobIds] = useState(() => new Set());
-  const [savedJobIds, setSavedJobIds] = useState(() => loadIdSet(LS_SAVED_JOBS));
+  const [savedJobIds, setSavedJobIds] = useState(() => loadSavedJobIds());
   const [recentSearches, setRecentSearches] = useState(() => loadRecentSearches());
 
   const appliedJobIds = useMemo(() => new Set(applications.map((a) => a.job)), [applications]);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === LS_SAVED_JOBS || e.key === null) setSavedJobIds(loadSavedJobIds());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     if (!location.hash) return;
@@ -2017,9 +2070,34 @@ function CandidateHomePage() {
 
   const salaryFilterActive = salaryMinK > 0 || salaryMaxK < 350;
 
+  useEffect(() => {
+    const q = locationFilter.trim();
+    if (whereSuggestDebounceRef.current) window.clearTimeout(whereSuggestDebounceRef.current);
+    if (q.length < 3) {
+      setWhereSuggestions([]);
+      setWhereSuggestLoading(false);
+      return undefined;
+    }
+    whereSuggestDebounceRef.current = window.setTimeout(async () => {
+      setWhereSuggestLoading(true);
+      try {
+        const rows = await api(`/api/auth/meta/places?q=${encodeURIComponent(q)}`, { withAuth: false });
+        const list = Array.isArray(rows) ? rows : [];
+        setWhereSuggestions(list);
+        setWhereSuggestOpen(list.length > 0);
+      } catch {
+        setWhereSuggestions([]);
+      } finally {
+        setWhereSuggestLoading(false);
+      }
+    }, 420);
+    return () => {
+      if (whereSuggestDebounceRef.current) window.clearTimeout(whereSuggestDebounceRef.current);
+    };
+  }, [locationFilter]);
+
   const filterJobs = useCallback(
     (jobs) => {
-      const loc = locationFilter.trim().toLowerCase();
       const wm = workModeFilter;
       const cat = categoryFilter;
       return jobs.filter((j) => {
@@ -2032,34 +2110,12 @@ function CandidateHomePage() {
           const pr = parseSalaryRangeK(j.jd_text);
           if (pr && !salaryRangeMatchesUser(pr, salaryMinK, salaryMaxK)) return false;
         }
-        if (!loc) return true;
-        const joinBullets = (arr) =>
-          (Array.isArray(arr) ? arr : [])
-            .map((x) => String(x || "").trim())
-            .filter(Boolean)
-            .join(" ");
-        const blob = [
-          j.title,
-          j.location,
-          j.company_info,
-          j.jd_text,
-          j.how_to_apply,
-          j.licenses_certifications,
-          formatCompensationSummary(j),
-          joinBullets(j.whats_on_offer),
-          joinBullets(j.looking_for_people_bullets),
-          joinBullets(j.looking_for_additional_bullets),
-          joinBullets(j.role_bullets),
-          joinBullets(j.why_choose_us_bullets),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return blob.includes(loc);
+        return candidateJobMatchesWhere(j, locationFilter, locationSearchTerms);
       });
     },
     [
       locationFilter,
+      locationSearchTerms,
       workModeFilter,
       categoryFilter,
       hiddenJobIds,
@@ -2085,10 +2141,11 @@ function CandidateHomePage() {
   }, [openPill]);
 
   const displayJobs = useMemo(() => {
-    if (browseMode === "search") return filterJobs(searchResults);
-    if (browseMode === "recommended") return filterJobs(recommendedJobs);
+    if (showingSearchResults) return filterJobs(searchResults);
+    const rec = filterJobs(recommendedJobs);
+    if (rec.length > 0) return rec;
     return filterJobs(feedJobs);
-  }, [browseMode, feedJobs, searchResults, recommendedJobs, filterJobs]);
+  }, [showingSearchResults, searchResults, recommendedJobs, feedJobs, filterJobs]);
 
   useEffect(() => {
     if (!displayJobs.length) {
@@ -2108,19 +2165,26 @@ function CandidateHomePage() {
   async function runJobSearch() {
     setError("");
     const q = keyword.trim();
-    if (!q) {
-      setBrowseMode("all");
+    const loc = locationFilter.trim();
+    if (!q && !loc && !locationSearchTerms.length) {
+      setShowingSearchResults(false);
       setSearchResults([]);
       return;
     }
     setSearchLoading(true);
     try {
-      const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`);
+      const params = new URLSearchParams();
+      if (q) params.set("keyword", q);
+      if (categoryFilter) params.set("category", categoryFilter);
+      if (workModeFilter) params.set("work_mode", workModeFilter);
+      if (locationSearchTerms.length) params.set("loc_terms", locationSearchTerms.join(","));
+      else if (loc) params.set("location", loc);
+      const rows = await api(`/api/jobs/search?${params.toString()}`);
       const list = Array.isArray(rows) ? rows : [];
       setSearchResults(list);
-      setBrowseMode("search");
+      setShowingSearchResults(true);
       setSelectedJobId(list[0]?.id ?? null);
-      setRecentSearches(pushRecentSearch(q));
+      if (q) setRecentSearches(pushRecentSearch(q));
     } catch (err) {
       setError(String(err.message || err));
     } finally {
@@ -2131,14 +2195,20 @@ function CandidateHomePage() {
   function resetBrowse() {
     setKeyword("");
     setSearchResults([]);
-    setBrowseMode("all");
+    setShowingSearchResults(false);
+    setLocationSearchTerms([]);
+    setWhereSuggestions([]);
+    setWhereSuggestOpen(false);
     setWorkTypeFilter("");
     setWorkModeFilter("");
     setSalaryMinK(0);
     setSalaryMaxK(350);
     setListedFilter("");
     setOpenPill(null);
-    setSelectedJobId(feedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
+    const rec = recommendedJobs.filter((j) => !hiddenJobIds.has(j.id));
+    setSelectedJobId(
+      rec[0]?.id ?? feedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null,
+    );
   }
 
   function applyRecentChip(q) {
@@ -2147,10 +2217,16 @@ function CandidateHomePage() {
     setError("");
     (async () => {
       try {
-        const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`);
+        const params = new URLSearchParams();
+        params.set("keyword", q);
+        if (categoryFilter) params.set("category", categoryFilter);
+        if (workModeFilter) params.set("work_mode", workModeFilter);
+        if (locationSearchTerms.length) params.set("loc_terms", locationSearchTerms.join(","));
+        else if (locationFilter.trim()) params.set("location", locationFilter.trim());
+        const rows = await api(`/api/jobs/search?${params.toString()}`);
         const list = Array.isArray(rows) ? rows : [];
         setSearchResults(list);
-        setBrowseMode("search");
+        setShowingSearchResults(true);
         setSelectedJobId(list[0]?.id ?? null);
       } catch (err) {
         setError(String(err.message || err));
@@ -2162,10 +2238,12 @@ function CandidateHomePage() {
 
   function toggleSavedJob(jobId) {
     setSavedJobIds((prev) => {
+      const id = Number(jobId);
+      if (!Number.isInteger(id) || id <= 0) return prev;
       const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
-      saveIdSet(LS_SAVED_JOBS, next);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      persistSavedJobIds(next);
       return next;
     });
   }
@@ -2174,26 +2252,15 @@ function CandidateHomePage() {
     setHiddenJobIds((prev) => new Set([...prev, jobId]));
   }
 
-  async function applyToJob(jobId) {
+  function goApplyToJob(jobId) {
     setError("");
     setStatus("");
-    try {
-      await api("/api/applications/", {
-        method: "POST",
-        body: JSON.stringify({ job: jobId }),
-      });
-      setStatus("Application sent.");
-      const apps = await api("/api/applications/");
-      setApplications(Array.isArray(apps) ? apps : []);
-    } catch (err) {
-      setError(String(err.message || err));
-    }
+    navigate(`/jobs/${jobId}/apply`);
   }
 
   return (
     <main className="homePage jobsSeekPage">
       <CandidateMemberHeader />
-      <div id="saved-searches" className="candidateScrollAnchor" tabIndex={-1} aria-hidden="true" />
 
       <section className="jobsSeekHero" aria-label="Job search">
         <div className="heroGlow heroGlowA" />
@@ -2227,14 +2294,67 @@ function CandidateHomePage() {
                 </select>
               </div>
             </div>
-            <div className="jobsSeekFieldBlock">
+            <div className="jobsSeekFieldBlock jobsSeekWhereBlock">
               <span className="jobsSeekFieldLabel">Where</span>
-              <input
-                className="jobsSeekInput"
-                placeholder="City, suburb, or region"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              />
+              <div className="jobsSeekWhereWrap">
+                <input
+                  className="jobsSeekInput"
+                  id="jobs-seek-where"
+                  placeholder="Start typing for place suggestions"
+                  value={locationFilter}
+                  autoComplete="off"
+                  aria-autocomplete="list"
+                  aria-expanded={whereSuggestOpen}
+                  aria-controls={whereSuggestOpen ? "jobs-where-suggest" : undefined}
+                  onChange={(e) => {
+                    setLocationFilter(e.target.value);
+                    setLocationSearchTerms([]);
+                  }}
+                  onFocus={() => {
+                    if (whereSuggestions.length) setWhereSuggestOpen(true);
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => setWhereSuggestOpen(false), 160);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") runJobSearch();
+                  }}
+                />
+                {whereSuggestLoading ? <span className="jobsSeekWhereSpinner" aria-label="Loading places" /> : null}
+                {whereSuggestOpen && whereSuggestions.length > 0 ? (
+                  <div
+                    id="jobs-where-suggest"
+                    className="suggestionBox suggestionBoxElevated jobsSeekWhereSuggest"
+                    role="listbox"
+                    aria-label="Place suggestions"
+                  >
+                    {whereSuggestions.map((s, idx) => (
+                      <button
+                        key={`${s.label}-${idx}`}
+                        type="button"
+                        role="option"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          const label = s.label || "";
+                          const terms =
+                            Array.isArray(s.terms) && s.terms.length
+                              ? s.terms.map((t) => String(t).toLowerCase())
+                              : label
+                                  .split(",")
+                                  .map((x) => x.trim().toLowerCase())
+                                  .filter((x) => x.length >= 2);
+                          setLocationFilter(label);
+                          setLocationSearchTerms(terms);
+                          setWhereSuggestOpen(false);
+                          setWhereSuggestions([]);
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="jobsSeekCtaWrap">
               <button type="button" className="jobsSeekCta" onClick={runJobSearch} disabled={searchLoading}>
@@ -2411,7 +2531,7 @@ function CandidateHomePage() {
       </section>
 
       {recentSearches.length > 0 && (
-        <div className="jobsSeekRecentBar">
+        <div id="saved-searches" className="jobsSeekRecentBar candidateScrollAnchor" tabIndex={-1}>
           <div className="jobsSeekRecentInner">
             {recentSearches.map((q) => (
               <button key={q} type="button" className="jobsSeekRecentChip" onClick={() => applyRecentChip(q)}>
@@ -2428,66 +2548,28 @@ function CandidateHomePage() {
 
       <div className="jobsSeekBody">
         <div className="jobsSeekMain">
-          <div className="jobsSeekTabs" role="tablist" aria-label="Results">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={browseMode === "recommended"}
-              className={`jobsSeekTab ${browseMode === "recommended" ? "jobsSeekTabOn" : ""}`}
-              onClick={() => {
-                setBrowseMode("recommended");
-                setSelectedJobId(recommendedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
-              }}
-            >
-              Recommended
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={browseMode === "all"}
-              className={`jobsSeekTab ${browseMode === "all" ? "jobsSeekTabOn" : ""}`}
-              onClick={() => {
-                setBrowseMode("all");
-                setSelectedJobId(feedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
-              }}
-            >
-              All jobs
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={browseMode === "search"}
-              className={`jobsSeekTab ${browseMode === "search" ? "jobsSeekTabOn" : ""}`}
-              disabled={!searchResults.length && browseMode !== "search"}
-              onClick={() => {
-                if (searchResults.length) {
-                  setBrowseMode("search");
-                  setSelectedJobId(searchResults.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
-                }
-              }}
-            >
-              Search results
-            </button>
-            {browseMode === "search" && (
-              <button type="button" className="jobsSeekTabClear" onClick={resetBrowse}>
-                Clear search
+          <div className="jobsSeekListHeaderRow">
+            <p className="jobsSeekListMeta">
+              {loadingFeed && !showingSearchResults && !recommendedJobs.length
+                ? "Loading…"
+                : showingSearchResults
+                  ? `${displayJobs.length} search result${displayJobs.length === 1 ? "" : "s"}`
+                  : `${displayJobs.length} role${displayJobs.length === 1 ? "" : "s"} ranked for you`}
+              {!showingSearchResults && loadingRecs ? " · Updating match scores" : ""}
+            </p>
+            {showingSearchResults ? (
+              <button type="button" className="jobsSeekLinkBtn jobsSeekListClearBtn" onClick={resetBrowse}>
+                Back to recommendations
               </button>
-            )}
+            ) : null}
           </div>
-
-          <p className="jobsSeekListMeta">
-            {loadingFeed && browseMode === "all" ? "Loading…" : `${displayJobs.length} open roles`}
-            {browseMode === "recommended" && loadingRecs ? " · Updating recommendations" : ""}
-          </p>
 
           <ul className="jobsSeekCardList">
             {!loadingFeed && displayJobs.length === 0 && (
               <li className="jobsSeekEmpty">
-                {browseMode === "recommended"
-                  ? "No recommendations yet. Add skills under Profile to improve matches, or browse all jobs."
-                  : browseMode === "search"
-                    ? "No jobs match that search. Try different keywords or filters."
-                    : "No open jobs match your filters."}
+                {showingSearchResults
+                  ? "No jobs match that search. Try different keywords or filters."
+                  : "No ranked roles yet. Add skills on your profile to improve matches — or check back when more employers post."}
               </li>
             )}
             {displayJobs.map((j) => {
@@ -2549,19 +2631,30 @@ function CandidateHomePage() {
                       <div className="jobsSeekCardActions">
                         <button
                           type="button"
-                          className={`jobsSeekIconBtn ${saved ? "jobsSeekIconBtnOn" : ""}`}
+                          className={`jobsSeekBookmarkBtn jobsSeekBookmarkBtn--compact ${saved ? "jobsSeekBookmarkBtn--saved" : ""}`}
                           title={saved ? "Remove from saved" : "Save job"}
                           aria-label={saved ? "Remove from saved" : "Save job"}
+                          aria-pressed={saved}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleSavedJob(j.id);
                           }}
                         >
-                          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                            <path
-                              d="M6 4h12v16l-6-4-6 4V4Zm1.5 1.5v11.8l4.5-3 4.5 3V5.5h-9Z"
-                              fill="currentColor"
-                            />
+                          <svg className="jobsSeekBookmarkSvg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                            {saved ? (
+                              <path
+                                d="M6 2.75h12c.55 0 1 .45 1 1v17.45c0 .72-.78 1.17-1.4.8L12 16.35l-5.6 4.65c-.62.37-1.4-.08-1.4-.8V3.75c0-.55.45-1 1-1Z"
+                                fill="currentColor"
+                              />
+                            ) : (
+                              <path
+                                d="M6 2.75h12c.55 0 1 .45 1 1v17.45c0 .72-.78 1.17-1.4.8L12 16.35l-5.6 4.65c-.62.37-1.4-.08-1.4-.8V3.75c0-.55.45-1 1-1Z"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.65"
+                                strokeLinejoin="round"
+                              />
+                            )}
                           </svg>
                         </button>
                         <button
@@ -2590,59 +2683,22 @@ function CandidateHomePage() {
           </ul>
         </div>
 
-        <aside className="jobsSeekAside">
-          <div id="saved-jobs" className="jobsSeekAsideCard candidateScrollSection">
-            <h4 className="jobsSeekAsideTitle">Saved</h4>
-            <p className="jobsSeekAsideText">
-              Keep roles you&apos;re considering in one place. Saved: <strong>{savedJobIds.size}</strong>
-            </p>
-          </div>
-          <div className="jobsSeekAsideCard">
-            <h4 className="jobsSeekAsideTitle">Your profile</h4>
-            <p className="jobsSeekAsideText">
-              A current profile helps surface roles that fit — update it whenever you like.
-            </p>
-            <Link className="jobsSeekAsideLink" to="/candidate">
-              Open candidate profile
-            </Link>
-          </div>
-
+        <aside className="jobsSeekAside jobsSeekAsideJobsOnly">
           {selectedJob ? (
             <JobPostingDetailPanel
               job={selectedJob}
               matchInfo={selectedJob._match}
               hasApplied={appliedJobIds.has(selectedJob.id)}
-              onApply={() => applyToJob(selectedJob.id)}
+              onApply={() => goApplyToJob(selectedJob.id)}
               showFullPageLink
+              bookmarkSaved={savedJobIds.has(selectedJob.id)}
+              onBookmarkToggle={() => toggleSavedJob(selectedJob.id)}
             />
           ) : (
             <div className="jobsSeekAsideCard jobsSeekAsideMuted">
-              <p className="jobsSeekAsideText">
-                Choose a listing on the left to read more. Apply whenever you&apos;re ready — there&apos;s no rush.
-              </p>
+              <p className="jobsSeekAsideText">Select a job from the list to see the full description and apply.</p>
             </div>
           )}
-
-          <div id="applied-jobs" className="jobsSeekAsideCard candidateScrollSection">
-            <h4 className="jobsSeekAsideTitle">Recent applications</h4>
-            {applications.length === 0 ? (
-              <p className="jobsSeekAsideText">None yet.</p>
-            ) : (
-              <ul className="jobsSeekAppMini">
-                {applications.slice(0, 5).map((a) => {
-                  const appJob = jobById.get(a.job);
-                  return (
-                    <li key={a.id}>
-                      <span className="jobsSeekAppMiniTitle">{appJob?.title || `Job #${a.job}`}</span>
-                      <span className="jobsSeekAppMiniMeta">
-                        {a.status} · {a.created_at ? String(a.created_at).slice(0, 10) : "—"}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
         </aside>
       </div>
 
@@ -2713,6 +2769,16 @@ function CandidateDashboard() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumePreview, setResumePreview] = useState(null);
+  const [savedJobsCount, setSavedJobsCount] = useState(() => loadSavedJobIds().size);
+
+  useEffect(() => {
+    const bump = () => setSavedJobsCount(loadSavedJobIds().size);
+    const onStorage = (e) => {
+      if (e.key === LS_SAVED_JOBS || e.key === null) bump();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -3079,8 +3145,13 @@ function CandidateDashboard() {
             <Link className="jobsSeekCta candidateDashBrowseCta" to="/">
               Browse jobs
             </Link>
-            <Link className="jobsSeekLinkBtn candidateDashHeroLink" to="/#saved-jobs">
-              Saved jobs
+            <Link className="candidateDashSavedJobsBtn" to="/candidate/saved-jobs">
+              <span className="candidateDashSavedJobsBtnLabel">Saved jobs</span>
+              {savedJobsCount > 0 ? (
+                <span className="candidateDashSavedJobsCount" aria-label={`${savedJobsCount} saved`}>
+                  {savedJobsCount}
+                </span>
+              ) : null}
             </Link>
           </div>
         </div>
@@ -3443,7 +3514,7 @@ function CandidateDashboard() {
               Resumes
             </h2>
             <p className="candidateDashCardHint">
-              Use <strong>Save changes</strong> below to save your profile, experience, and résumé display names together. After each upload, set the name in the list. Uploads are parsed to refresh skills—drag files in or click to upload.
+              Use <strong>Save changes</strong> below to save your profile, experience, and resume display names together. After each upload, set the name in the list. Uploads are parsed to refresh skills—drag files in or click to upload.
             </p>
             <div
               className={`candidateDashDropzone ${dragActive ? "candidateDashDropzoneActive" : ""}`}
@@ -4150,20 +4221,8 @@ function EmployerCompanyProfilePage({ variant = "onboarding" }) {
         }}
       >
         <header className="employerOnboardingHeader">
-          <div className="employerOnboardingTopRow">
-            <div className="employerOnboardingBackCell">
-              {isOnboarding ? (
-                <BackButton />
-              ) : (
-                <Link to="/" className="employerOnboardingDashBack">
-                  ← Employer home
-                </Link>
-              )}
-            </div>
-            <div className="employerOnboardingBrandCell">
-              <AuthBrand />
-            </div>
-            <div className="employerOnboardingBackSpacer" aria-hidden="true" />
+          <div className="employerOnboardingBrandStrip">
+            <SiteBrandBar fallbackTo={isOnboarding ? "/" : "/employer"} />
           </div>
           <h1 className="employerOnboardingTitle">{isOnboarding ? "Company profile" : "Edit company profile"}</h1>
           <p className="employerOnboardingLead">
@@ -4933,14 +4992,15 @@ function EmployerDashboard() {
 function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [postcode, setPostcode] = useState("");
+  const [homeJobQuery, setHomeJobQuery] = useState("");
+  const [homeSearchLabel, setHomeSearchLabel] = useState("");
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobsError, setJobsError] = useState("");
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [wordVisible, setWordVisible] = useState(true);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const rotatingWords = ["your next role", "the right people", "better opportunities"];
 
@@ -4973,30 +5033,29 @@ function Home() {
     return <CandidateHomePage />;
   }
 
-  async function viewNearbyJobs() {
+  async function runHomeJobSearch() {
     setJobsError("");
     setLoadingJobs(true);
+    const q = homeJobQuery.trim();
     try {
-      const feed = await api("/api/jobs/feed", { withAuth: false });
-      const normalized = postcode.trim().toLowerCase();
-      const filtered = normalized
-        ? feed.filter((j) => (j.location || "").toLowerCase().includes(normalized))
-        : feed;
-      setJobs(filtered.slice(0, 6));
+      if (!q) {
+        const feed = await api("/api/jobs/feed", { withAuth: false });
+        const list = Array.isArray(feed) ? feed : [];
+        setJobs(list.slice(0, 6));
+        setHomeSearchLabel("");
+        return;
+      }
+      const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`, { withAuth: false });
+      const list = Array.isArray(rows) ? rows : [];
+      setJobs(list.slice(0, 20));
+      setHomeSearchLabel(q);
     } catch (err) {
       setJobsError("Could not load jobs right now. Please try again.");
+      setJobs([]);
+      setHomeSearchLabel("");
     } finally {
       setLoadingJobs(false);
     }
-  }
-
-  function handleHeroMove(e) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = (e.clientX - cx) / rect.width;
-    const dy = (e.clientY - cy) / rect.height;
-    setTilt({ x: dx * 8, y: dy * 8 });
   }
 
   if (!user) {
@@ -5004,35 +5063,26 @@ function Home() {
       <main className="homePage">
         <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
           <div className="homeHeaderLead">
-            <BackButton className="homeHeaderBack" />
             <Link to="/" className="homeHeaderBrand">
               <img className="homeHeaderLogo" src={ldLogo} alt="" />
               <span className="homeHeaderWordmark">SkillMesh</span>
             </Link>
           </div>
           <div className="homeHeaderActions">
-            <Link className="btnGhost" to="/login">Log in</Link>
+            <button className="btnGhost" type="button" onClick={() => setShowLoginModal(true)}>
+              Log in
+            </button>
             <button className="btnLink" type="button" onClick={() => setShowSignupModal(true)}>
               Sign up
             </button>
           </div>
         </header>
 
-        <section
-          className="homeHero"
-          onMouseMove={handleHeroMove}
-          onMouseLeave={() => setTilt({ x: 0, y: 0 })}
-        >
+        <section className="homeHero">
           <div className="heroGlow heroGlowA" />
           <div className="heroGlow heroGlowB" />
           <div className="heroMesh" />
-          <div
-            className="heroInner"
-            style={{
-              transform: `rotateX(${-tilt.y}deg) rotateY(${tilt.x}deg) translateZ(0)`,
-            }}
-          >
-            <p className="heroKicker">AI-Powered Hiring Platform</p>
+          <div className="heroInner">
             <h1>
               Match with{" "}
               <span className={`gradientText ${wordVisible ? "wordIn" : "wordOut"}`}>
@@ -5044,31 +5094,72 @@ function Home() {
             </p>
             <div className="postcodeBox">
               <input
-                placeholder="Enter postcode (e.g. 2500)"
-                value={postcode}
-                onChange={(e) => setPostcode(e.target.value)}
+                type="search"
+                autoComplete="off"
+                placeholder="Job title, skills, location, or postcode"
+                value={homeJobQuery}
+                onChange={(e) => setHomeJobQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") runHomeJobSearch();
+                }}
+                aria-label="Search open jobs"
               />
-              <button className="searchButton" onClick={viewNearbyJobs} disabled={loadingJobs}>
-                {loadingJobs ? "Searching..." : "Find Jobs Near Me"}
+              <button type="button" className="searchButton" onClick={runHomeJobSearch} disabled={loadingJobs}>
+                {loadingJobs ? "Searching..." : "Search jobs"}
                 <span>→</span>
               </button>
             </div>
           </div>
           {jobsError && <p className="error">{jobsError}</p>}
+          {!jobsError && homeSearchLabel && jobs.length === 0 && (
+            <p className="homeJobPreviewEmpty" role="status">
+              {`No open roles match "${homeSearchLabel}". Try different keywords or a location.`}
+            </p>
+          )}
           {jobs.length > 0 && (
-            <div className="jobPreviewList">
-              {jobs.map((j) => (
-                <Link key={j.id} to={`/jobs/${j.id}`} className="jobRow jobRowLink">
-                  <article className="jobRowInner">
-                    <h4>{j.title}</h4>
-                    <div className="jobMeta">
-                      <span>{j.location || "Location TBD"}</span>
-                      <span>{j.work_mode}</span>
-                    </div>
-                  </article>
-                </Link>
-              ))}
-            </div>
+            <section className="homeJobPreviewPanel" aria-labelledby="home-job-preview-heading">
+              <h3 id="home-job-preview-heading" className="homeJobPreviewTitle">
+                {homeSearchLabel ? `Results for "${homeSearchLabel}"` : "Open roles"}
+              </h3>
+              <p className="homeJobPreviewLead">Select a role to read the full description and apply.</p>
+              <ul className="homeJobPreviewList">
+                {jobs.map((j) => {
+                  const pay = formatCompensationSummary(j);
+                  const posted = formatPostedShort(j.created_at);
+                  const categoryName = j.job_category?.name;
+                  return (
+                    <li key={j.id} className="homeJobPreviewItem">
+                      <Link
+                        to={`/jobs/${j.id}`}
+                        className="homeJobPreviewCard"
+                        aria-label={`${j.title} at ${j.company_info || "company"} — view job`}
+                      >
+                        <div className="homeJobPreviewCardHead">
+                          <span className="homeJobPreviewAvatar" aria-hidden="true">
+                            {companyAvatarLetter(j.company_info, j.title)}
+                          </span>
+                          <div className="homeJobPreviewHeadText">
+                            <span className="homeJobPreviewCompany">{j.company_info || "Company"}</span>
+                            <h4 className="homeJobPreviewRole">{j.title}</h4>
+                          </div>
+                          {posted ? (
+                            <span className="homeJobPreviewPosted" title="Posted">
+                              {posted}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="homeJobPreviewTags">
+                          <span className="homeJobPreviewTag">{j.location || "Location TBD"}</span>
+                          <span className="homeJobPreviewTag">{formatWorkModeLabel(j.work_mode) || "Work mode TBD"}</span>
+                          {categoryName ? <span className="homeJobPreviewTag">{categoryName}</span> : null}
+                          {pay ? <span className="homeJobPreviewTag homeJobPreviewTagPay">{pay}</span> : null}
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           )}
         </section>
 
@@ -5140,6 +5231,48 @@ function Home() {
             </div>
           </div>
         )}
+
+        {showLoginModal && (
+          <div className="modalOverlay" onClick={() => setShowLoginModal(false)}>
+            <div className="roleModal" onClick={(e) => e.stopPropagation()}>
+              <h3>Log in as</h3>
+              <p>Choose your account type to continue.</p>
+              <div className="roleChoices">
+                <button
+                  type="button"
+                  className="roleChoiceBtn"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    navigate("/login?role=candidate");
+                  }}
+                >
+                  <span className="roleEmoji">👤</span>
+                  <span>
+                    <strong>Candidate</strong>
+                    <small>Find roles matched to your profile</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="roleChoiceBtn"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    navigate("/login?role=employer");
+                  }}
+                >
+                  <span className="roleEmoji">🏢</span>
+                  <span>
+                    <strong>Employer</strong>
+                    <small>Post jobs and hire faster</small>
+                  </span>
+                </button>
+              </div>
+              <button className="modalCloseBtn" type="button" onClick={() => setShowLoginModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -5149,11 +5282,12 @@ function Home() {
   return (
     <div className="card employerHomeCard">
       <div className="employerHomeTop">
-        <BackButton />
-        <Link to="/" className="homeHeaderBrand employerHomeBrandLink">
-          <img className="homeHeaderLogo" src={ldLogo} alt="" />
-          <span className="homeHeaderWordmark">SkillMesh</span>
-        </Link>
+        <div className="homeHeaderLead">
+          <Link to="/" className="homeHeaderBrand employerHomeBrandLink">
+            <img className="homeHeaderLogo" src={ldLogo} alt="" />
+            <span className="homeHeaderWordmark">SkillMesh</span>
+          </Link>
+        </div>
       </div>
       <h1>SkillMesh</h1>
       <p>Intelligent Talent Matching Platform</p>
@@ -5172,6 +5306,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
       <Route path="/jobs/:jobId" element={<JobDetailPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -5196,6 +5331,22 @@ export default function App() {
         element={
           <CandidateOnboardingRoute page="dashboard">
             <CandidateDashboard />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/candidate/saved-jobs"
+        element={
+          <CandidateOnboardingRoute page="saved_jobs">
+            <CandidateSavedJobsPage />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/candidate/applied-jobs"
+        element={
+          <CandidateOnboardingRoute page="applied_jobs">
+            <CandidateAppliedJobsPage />
           </CandidateOnboardingRoute>
         }
       />

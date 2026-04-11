@@ -1,8 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { BackButton } from "./BackButton";
-import ldLogo from "./assets/ld.png";
+import { SiteBrandBar } from "./SiteBrandBar";
 
 export function EmployerMemberHeader() {
   const { user, logout } = useAuth();
@@ -53,13 +52,7 @@ export function EmployerMemberHeader() {
 
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
-      <div className="homeHeaderLead">
-        <BackButton className="homeHeaderBack" />
-        <Link to="/" className="homeHeaderBrand candidateHeaderBrand">
-          <img className="homeHeaderLogo" src={ldLogo} alt="" />
-          <span className="homeHeaderWordmark">SkillMesh</span>
-        </Link>
-      </div>
+      <SiteBrandBar brandClassName="candidateHeaderBrand" />
       <div className="candidateProfileMenuRoot" ref={menuRef}>
         <button
           type="button"

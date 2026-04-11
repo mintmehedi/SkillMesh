@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "./auth";
 import { api } from "./api";
 import { formatApiError } from "./apiErrors";
-import { BackButton } from "./BackButton";
 import ldLogo from "./assets/ld.png";
 
 export function EmployerHomePage() {
@@ -65,7 +64,6 @@ export function EmployerHomePage() {
       <div className="employerLandingShell">
         <header className="employerLandingHeader">
           <div className="employerLandingTopRow">
-            <BackButton className="homeHeaderBack" fallbackTo="/employer" />
             <Link to="/" className="homeHeaderBrand employerLandingBrand" aria-label="SkillMesh — employer home">
               <img className="homeHeaderLogo" src={ldLogo} alt="" />
               <span className="homeHeaderWordmark">SkillMesh</span>

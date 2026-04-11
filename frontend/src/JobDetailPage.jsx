@@ -1,12 +1,12 @@
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { useAuth } from "./auth";
-import { BackButton } from "./BackButton";
+import { LS_SAVED_JOBS, loadSavedJobIds, persistSavedJobIds } from "./savedJobs";
 import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { JobPostingDetailPanel } from "./JobPostingDetailPanel";
+import { SiteBrandBar } from "./SiteBrandBar";
 import { formatPostedShort } from "./jobFormatters";
-import ldLogo from "./assets/ld.png";
 
 function employerPreviewMessage(job) {
   if (!job) return "";
@@ -33,12 +33,13 @@ export function JobDetailPage() {
   const { jobId } = useParams();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [job, setJob] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [previewMode, setPreviewMode] = useState(false);
   const [applications, setApplications] = useState([]);
-  const [applyBusy, setApplyBusy] = useState(false);
   const [flash, setFlash] = useState("");
+  const [savedTick, setSavedTick] = useState(0);
 
   const idNum = Number(jobId);
   const validId = Number.isInteger(idNum) && idNum > 0;
@@ -89,6 +90,16 @@ export function JobDetailPage() {
   }, [validId, idNum, user?.role, authLoading, user]);
 
   useEffect(() => {
+    if (location.state?.applicationSubmitted) {
+      setFlash("Application submitted.");
+      navigate(".", { replace: true, state: {} });
+    } else if (location.state?.alreadyApplied) {
+      setFlash("You’ve already applied to this role.");
+      navigate(".", { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
+
+  useEffect(() => {
     if (!job?.title) return undefined;
     const prev = document.title;
     document.title = `${job.title} · SkillMesh`;
@@ -121,9 +132,33 @@ export function JobDetailPage() {
     [applications, idNum],
   );
 
-  const handleApply = useCallback(async () => {
+  const bookmarkSaved = useMemo(
+    () => validId && loadSavedJobIds().has(idNum),
+    [validId, idNum, savedTick],
+  );
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === LS_SAVED_JOBS || e.key === null) setSavedTick((t) => t + 1);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const toggleBookmark = useCallback(() => {
+    if (!validId) return;
+    const s = loadSavedJobIds();
+    if (s.has(idNum)) s.delete(idNum);
+    else s.add(idNum);
+    persistSavedJobIds(s);
+    setSavedTick((t) => t + 1);
+  }, [validId, idNum]);
+
+  const showBookmarkControl = Boolean(job && validId && !previewMode && user?.role !== "employer");
+
+  const handleApply = useCallback(() => {
     if (!user) {
-      navigate("/login");
+      navigate(`/login?next=/jobs/${idNum}/apply`);
       return;
     }
     if (user.role !== "candidate") {
@@ -134,21 +169,8 @@ export function JobDetailPage() {
       navigate("/onboarding/work-experience");
       return;
     }
-    setApplyBusy(true);
     setFlash("");
-    try {
-      await api("/api/applications/", {
-        method: "POST",
-        body: JSON.stringify({ job: idNum }),
-      });
-      setFlash("Application sent.");
-      const apps = await api("/api/applications/");
-      setApplications(Array.isArray(apps) ? apps : []);
-    } catch (e) {
-      setFlash(String(e.message || e) || "Could not apply.");
-    } finally {
-      setApplyBusy(false);
-    }
+    navigate(`/jobs/${idNum}/apply`);
   }, [user, navigate, idNum]);
 
   if (authLoading && !validId) {
@@ -166,13 +188,7 @@ export function JobDetailPage() {
     return (
       <main className="jobDetailPage jobDetailPageError">
         <header className="jobDetailPageHeader jobDetailPageHeaderSimple">
-          <div className="jobDetailPageHeaderLead">
-            <BackButton className="homeHeaderBack" />
-            <Link to="/" className="homeHeaderBrand">
-              <img className="homeHeaderLogo" src={ldLogo} alt="" />
-              <span className="homeHeaderWordmark">SkillMesh</span>
-            </Link>
-          </div>
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" />
         </header>
         <div className="jobDetailPageInner">
           <p className="error">Invalid job link.</p>
@@ -192,13 +208,7 @@ export function JobDetailPage() {
         <CandidateMemberHeader />
       ) : user?.role === "employer" ? (
         <header className="jobDetailPageHeader jobDetailPageHeaderEmployer">
-          <div className="jobDetailPageHeaderLead">
-            <BackButton className="homeHeaderBack" fallbackTo="/" />
-            <Link to="/" className="homeHeaderBrand">
-              <img className="homeHeaderLogo" src={ldLogo} alt="" />
-              <span className="homeHeaderWordmark">SkillMesh</span>
-            </Link>
-          </div>
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" fallbackTo="/" />
           <nav className="jobDetailPageHeaderNav" aria-label="Employer shortcuts">
             <Link className="jobDetailPageNavLink" to="/employer">
               Dashboard
@@ -213,13 +223,7 @@ export function JobDetailPage() {
         </header>
       ) : (
         <header className="jobDetailPageHeader jobDetailPageHeaderSimple">
-          <div className="jobDetailPageHeaderLead">
-            <BackButton className="homeHeaderBack" />
-            <Link to="/" className="homeHeaderBrand">
-              <img className="homeHeaderLogo" src={ldLogo} alt="" />
-              <span className="homeHeaderWordmark">SkillMesh</span>
-            </Link>
-          </div>
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" />
         </header>
       )}
 
@@ -253,7 +257,15 @@ export function JobDetailPage() {
         {job && (
           <>
             {flash ? (
-              <p className={flash.includes("sent") ? "success jobsSeekFlash" : "error jobsSeekFlash"}>{flash}</p>
+              <p
+                className={
+                  flash.includes("sent") || flash.includes("submitted") || flash.includes("already applied")
+                    ? "success jobsSeekFlash"
+                    : "error jobsSeekFlash"
+                }
+              >
+                {flash}
+              </p>
             ) : null}
             {previewMode && (
               <div className="jobDetailPreviewBanner" role="status">
@@ -283,11 +295,12 @@ export function JobDetailPage() {
                     ? handleApply
                     : undefined
               }
-              applyBusy={applyBusy}
               showFullPageLink={false}
               employerPreview={previewMode}
               employerViewingPublic={user?.role === "employer" && !previewMode}
               fullPageLayout
+              bookmarkSaved={bookmarkSaved}
+              onBookmarkToggle={showBookmarkControl ? toggleBookmark : undefined}
             />
           </>
         )}
