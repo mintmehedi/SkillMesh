@@ -30,7 +30,7 @@ def run():
 
     profile, _ = CandidateProfile.objects.get_or_create(
         user=candidate_user,
-        defaults={"full_name": "Demo Candidate", "education_level": "Bachelor", "years_experience": 2},
+        defaults={"full_name": "Demo Candidate", "education_level": "Bachelor"},
     )
     CandidateSkill.objects.get_or_create(candidate=profile, skill_name="python", defaults={"level": 3})
     CandidateSkill.objects.get_or_create(candidate=profile, skill_name="react", defaults={"level": 2})

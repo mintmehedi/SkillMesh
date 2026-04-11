@@ -18,7 +18,10 @@ class CandidateProfile(models.Model):
     mobile_number = models.CharField(max_length=32, blank=True)
     education_level = models.CharField(max_length=120, blank=True)
     major = models.CharField(max_length=120, blank=True)
-    years_experience = models.PositiveIntegerField(default=0)  # pyright: ignore[reportArgumentType]
+    headline = models.CharField(max_length=180, blank=True)
+    linkedin_url = models.URLField(max_length=500, blank=True)
+    portfolio_url = models.URLField(max_length=500, blank=True)
+    availability = models.CharField(max_length=80, blank=True)
     location = models.CharField(max_length=120, blank=True)
     preferred_mode = models.CharField(max_length=20, blank=True)
     summary = models.TextField(blank=True)
@@ -32,6 +35,24 @@ class CandidateProfile(models.Model):
         blank=True,
         related_name="preferred_by_candidates",
     )
+
+
+class CandidateEducation(models.Model):
+    """Formal study: degree / institution / field (onboarding + profile)."""
+
+    candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE, related_name="education_entries")
+    institution = models.CharField(max_length=255, blank=True)
+    degree = models.CharField(max_length=255, blank=True)
+    field_of_study = models.CharField(max_length=255, blank=True)
+    major = models.CharField(max_length=255, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_current = models.BooleanField(default=False)  # pyright: ignore[reportArgumentType]
+    description = models.TextField(blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)  # pyright: ignore[reportArgumentType]
+
+    class Meta:
+        ordering = ["sort_order", "-start_date", "id"]
 
 
 class WorkExperience(models.Model):
@@ -56,6 +77,7 @@ class CandidateSkill(models.Model):
 
 class ResumeDocument(models.Model):
     candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE, related_name="resumes")
+    display_name = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to="resumes/")
     raw_text = models.TextField(blank=True)
     parsed_json = models.JSONField(default=dict, blank=True)

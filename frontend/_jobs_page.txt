@@ -1,0 +1,556 @@
+function CandidateHomePage() {
+  const { user } = useAuth();
+  const [jobCategories, setJobCategories] = useState([]);
+  const [feedJobs, setFeedJobs] = useState([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [jobsError, setJobsError] = useState("");
+  const [recommended, setRecommended] = useState([]);
+  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [keyword, setKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [browseMode, setBrowseMode] = useState("recommended");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [workModeFilter, setWorkModeFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [applications, setApplications] = useState([]);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [hiddenJobIds, setHiddenJobIds] = useState(() => new Set());
+  const [savedJobIds, setSavedJobIds] = useState(() => loadIdSet(LS_SAVED_JOBS));
+  const [recentSearches, setRecentSearches] = useState(() => loadRecentSearches());
+
+  const appliedJobIds = useMemo(() => new Set(applications.map((a) => a.job)), [applications]);
+
+  const loadFeed = useCallback(async () => {
+    setJobsError("");
+    setLoadingFeed(true);
+    try {
+      const feed = await api("/api/jobs/feed", { withAuth: false });
+      setFeedJobs(Array.isArray(feed) ? feed : []);
+    } catch {
+      setJobsError("Could not load jobs right now. Please try again.");
+      setFeedJobs([]);
+    } finally {
+      setLoadingFeed(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const cats = await api("/api/candidates/job-categories/", { withAuth: false });
+        if (alive && Array.isArray(cats)) setJobCategories(cats);
+      } catch {
+        if (alive) setJobCategories([]);
+      }
+      try {
+        const recs = await api("/api/recommendations/jobs-for-candidate");
+        if (alive) setRecommended(Array.isArray(recs) ? recs : []);
+      } catch {
+        if (alive) setRecommended([]);
+      } finally {
+        if (alive) setLoadingRecs(false);
+      }
+      try {
+        const apps = await api("/api/applications/");
+        if (alive) setApplications(Array.isArray(apps) ? apps : []);
+      } catch {
+        if (alive) setApplications([]);
+      }
+      await loadFeed();
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [loadFeed]);
+
+  const jobById = useMemo(() => {
+    const m = new Map();
+    for (const j of feedJobs) m.set(j.id, j);
+    for (const j of searchResults) m.set(j.id, j);
+    return m;
+  }, [feedJobs, searchResults]);
+
+  const recommendedJobs = useMemo(() => {
+    if (!recommended.length) return [];
+    return recommended
+      .map((r) => {
+        const j = jobById.get(r.job_id);
+        if (!j) return null;
+        return { ...j, _match: r };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (Number(b._match?.score) || 0) - (Number(a._match?.score) || 0));
+  }, [recommended, jobById]);
+
+  const filterJobs = useCallback(
+    (jobs) => {
+      const loc = locationFilter.trim().toLowerCase();
+      const wm = workModeFilter;
+      const cat = categoryFilter;
+      return jobs.filter((j) => {
+        if (hiddenJobIds.has(j.id)) return false;
+        if (cat && String(j.job_category?.id ?? "") !== cat) return false;
+        if (wm && j.work_mode !== wm) return false;
+        if (!loc) return true;
+        const blob = [j.title, j.location, j.company_info, j.jd_text].filter(Boolean).join(" ").toLowerCase();
+        return blob.includes(loc);
+      });
+    },
+    [locationFilter, workModeFilter, categoryFilter, hiddenJobIds],
+  );
+
+  const displayJobs = useMemo(() => {
+    if (browseMode === "search") return filterJobs(searchResults);
+    if (browseMode === "recommended") return filterJobs(recommendedJobs);
+    return filterJobs(feedJobs);
+  }, [browseMode, feedJobs, searchResults, recommendedJobs, filterJobs]);
+
+  useEffect(() => {
+    if (!displayJobs.length) {
+      setSelectedJobId(null);
+      return;
+    }
+    if (selectedJobId == null || !displayJobs.some((j) => j.id === selectedJobId)) {
+      setSelectedJobId(displayJobs[0].id);
+    }
+  }, [displayJobs, selectedJobId]);
+
+  const selectedJob = useMemo(
+    () => displayJobs.find((j) => j.id === selectedJobId) ?? null,
+    [displayJobs, selectedJobId],
+  );
+
+  async function runJobSearch() {
+    setError("");
+    const q = keyword.trim();
+    if (!q) {
+      setBrowseMode("all");
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`);
+      const list = Array.isArray(rows) ? rows : [];
+      setSearchResults(list);
+      setBrowseMode("search");
+      setSelectedJobId(list[0]?.id ?? null);
+      setRecentSearches(pushRecentSearch(q));
+    } catch (err) {
+      setError(String(err.message || err));
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function resetBrowse() {
+    setKeyword("");
+    setSearchResults([]);
+    setBrowseMode("all");
+    setSelectedJobId(feedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
+  }
+
+  function applyRecentChip(q) {
+    setKeyword(q);
+    setSearchLoading(true);
+    setError("");
+    (async () => {
+      try {
+        const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`);
+        const list = Array.isArray(rows) ? rows : [];
+        setSearchResults(list);
+        setBrowseMode("search");
+        setSelectedJobId(list[0]?.id ?? null);
+      } catch (err) {
+        setError(String(err.message || err));
+      } finally {
+        setSearchLoading(false);
+      }
+    })();
+  }
+
+  function toggleSavedJob(jobId) {
+    setSavedJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      saveIdSet(LS_SAVED_JOBS, next);
+      return next;
+    });
+  }
+
+  function hideJob(jobId) {
+    setHiddenJobIds((prev) => new Set([...prev, jobId]));
+  }
+
+  async function applyToJob(jobId) {
+    setError("");
+    setStatus("");
+    try {
+      await api("/api/applications/", {
+        method: "POST",
+        body: JSON.stringify({ job: jobId }),
+      });
+      setStatus("Application sent.");
+      const apps = await api("/api/applications/");
+      setApplications(Array.isArray(apps) ? apps : []);
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  return (
+    <main className="homePage jobsSeekPage">
+      <CandidateMemberHeader />
+
+      <section className="jobsSeekHero" aria-label="Job search">
+        <div className="heroGlow heroGlowA" />
+        <div className="heroGlow heroGlowB" />
+        <div className="heroMesh" />
+        <div className="jobsSeekHeroInner">
+          <p className="heroKicker jobsSeekHeroKicker">Search open roles</p>
+          <div className="jobsSeekSearchGrid">
+            <div className="jobsSeekFieldBlock">
+              <span className="jobsSeekFieldLabel">What</span>
+              <div className="jobsSeekWhatRow">
+                <input
+                  className="jobsSeekInput"
+                  placeholder="Job title, skill, or keyword"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && runJobSearch()}
+                />
+                <select
+                  className="jobsSeekSelect"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  aria-label="Classification"
+                >
+                  <option value="">Any classification</option>
+                  {jobCategories.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="jobsSeekFieldBlock">
+              <span className="jobsSeekFieldLabel">Where</span>
+              <input
+                className="jobsSeekInput"
+                placeholder="City, suburb, or region"
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+              />
+            </div>
+            <div className="jobsSeekCtaWrap">
+              <button type="button" className="jobsSeekCta" onClick={runJobSearch} disabled={searchLoading}>
+                {searchLoading ? "…" : "Search"}
+              </button>
+            </div>
+          </div>
+          <button type="button" className="jobsSeekMoreToggle" onClick={() => setShowMoreOptions((v) => !v)}>
+            More options
+          </button>
+          {showMoreOptions && (
+            <div className="jobsSeekMorePanel">
+              <span className="jobsSeekMoreLabel">Work mode</span>
+              <div className="jobsSeekChipRow">
+                {[
+                  { id: "", label: "Any" },
+                  { id: "remote", label: "Remote" },
+                  { id: "hybrid", label: "Hybrid" },
+                  { id: "onsite", label: "On-site" },
+                ].map(({ id, label }) => (
+                  <button
+                    key={id || "any"}
+                    type="button"
+                    className={`jobsSeekChip ${workModeFilter === id ? "jobsSeekChipOn" : ""}`}
+                    onClick={() => setWorkModeFilter(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="jobsSeekLinkBtn" onClick={loadFeed} disabled={loadingFeed}>
+                {loadingFeed ? "Refreshing listings…" : "Refresh job list"}
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {recentSearches.length > 0 && (
+        <div className="jobsSeekRecentBar">
+          <div className="jobsSeekRecentInner">
+            {recentSearches.map((q) => (
+              <button key={q} type="button" className="jobsSeekRecentChip" onClick={() => applyRecentChip(q)}>
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {status && <p className="success jobsSeekFlash">{status}</p>}
+      {error && <p className="error jobsSeekFlash">{error}</p>}
+      {jobsError && <p className="error jobsSeekFlash">{jobsError}</p>}
+
+      <div className="jobsSeekBody">
+        <div className="jobsSeekMain">
+          <div className="jobsSeekTabs" role="tablist" aria-label="Results">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={browseMode === "recommended"}
+              className={`jobsSeekTab ${browseMode === "recommended" ? "jobsSeekTabOn" : ""}`}
+              onClick={() => {
+                setBrowseMode("recommended");
+                setSelectedJobId(recommendedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
+              }}
+            >
+              Recommended
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={browseMode === "all"}
+              className={`jobsSeekTab ${browseMode === "all" ? "jobsSeekTabOn" : ""}`}
+              onClick={() => {
+                setBrowseMode("all");
+                setSelectedJobId(feedJobs.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
+              }}
+            >
+              All jobs
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={browseMode === "search"}
+              className={`jobsSeekTab ${browseMode === "search" ? "jobsSeekTabOn" : ""}`}
+              disabled={!searchResults.length && browseMode !== "search"}
+              onClick={() => {
+                if (searchResults.length) {
+                  setBrowseMode("search");
+                  setSelectedJobId(searchResults.filter((j) => !hiddenJobIds.has(j.id))[0]?.id ?? null);
+                }
+              }}
+            >
+              Search results
+            </button>
+            {browseMode === "search" && (
+              <button type="button" className="jobsSeekTabClear" onClick={resetBrowse}>
+                Clear search
+              </button>
+            )}
+          </div>
+
+          <p className="jobsSeekListMeta">
+            {loadingFeed && browseMode === "all" ? "Loading…" : `${displayJobs.length} jobs`}
+            {browseMode === "recommended" && loadingRecs ? " · Updating recommendations" : ""}
+          </p>
+
+          <ul className="jobsSeekCardList">
+            {!loadingFeed && displayJobs.length === 0 && (
+              <li className="jobsSeekEmpty">
+                {browseMode === "recommended"
+                  ? "No recommendations yet. Add skills under Profile to improve matches, or browse all jobs."
+                  : browseMode === "search"
+                    ? "No jobs match that search. Try different keywords or filters."
+                    : "No open jobs match your filters."}
+              </li>
+            )}
+            {displayJobs.map((j) => {
+              const active = j.id === selectedJobId;
+              const pct = j._match ? matchScorePercent(j._match.score) : null;
+              const saved = savedJobIds.has(j.id);
+              return (
+                <li key={j.id}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className={`jobsSeekCard ${active ? "jobsSeekCardActive" : ""}`}
+                    onClick={() => setSelectedJobId(j.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedJobId(j.id);
+                      }
+                    }}
+                  >
+                    <div className="jobsSeekCardTop">
+                      <div className="jobsSeekCardText">
+                        <h3 className="jobsSeekCardTitle">{j.title}</h3>
+                        <p className="jobsSeekCardCompany">{j.company_info || "Employer"}</p>
+                        <div className="jobsSeekCardBadges">
+                          {j._match && <span className="jobsSeekBadge jobsSeekBadgeRec">Recommended</span>}
+                          {!j._match && isRecentlyPosted(j.created_at) && (
+                            <span className="jobsSeekBadge jobsSeekBadgeNew">New</span>
+                          )}
+                          {appliedJobIds.has(j.id) && <span className="jobsSeekBadge jobsSeekBadgeApp">Applied</span>}
+                        </div>
+                        <ul className="jobsSeekCardFacts">
+                          <li>{formatWorkModeLabel(j.work_mode)}</li>
+                          <li>{j.location || "Location in description"}</li>
+                          <li>
+                            {j.required_experience != null ? `${j.required_experience}+ yrs experience` : "Experience in listing"}
+                          </li>
+                          {pct != null && <li>{pct}% profile match</li>}
+                        </ul>
+                      </div>
+                      <div className="jobsSeekCardLogo" aria-hidden="true">
+                        {companyAvatarLetter(j.company_info, j.title)}
+                      </div>
+                    </div>
+                    <div className="jobsSeekCardBottom">
+                      <span className="jobsSeekCardPosted">{j.created_at ? formatPostedShort(j.created_at) : ""}</span>
+                      <div className="jobsSeekCardActions">
+                        <button
+                          type="button"
+                          className={`jobsSeekIconBtn ${saved ? "jobsSeekIconBtnOn" : ""}`}
+                          title={saved ? "Remove from saved" : "Save job"}
+                          aria-label={saved ? "Remove from saved" : "Save job"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSavedJob(j.id);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                            <path
+                              d="M6 4h12v16l-6-4-6 4V4Zm1.5 1.5v11.8l4.5-3 4.5 3V5.5h-9Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="jobsSeekIconBtn"
+                          title="Hide this job"
+                          aria-label="Hide this job"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hideJob(j.id);
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                            <path
+                              d="M6.3 5.7 18.2 17.6l-1.1 1.1L14 15.6c-1.2.7-2.5 1-4 1-4 0-7.2-3-8.5-4.5a1 1 0 0 1 0-1.3c.5-.6 1.3-1.4 2.2-2.1L5.2 6.8 6.3 5.7Zm3.4 3.4-1.9 1.9c-.7.5-1.3 1-1.7 1.4.9.8 2.8 2.3 5 2.3 1 0 1.9-.2 2.7-.5l-2-2c-.3.1-.6.2-1 .2a2.5 2.5 0 0 1-2.1-3.3Zm4.5-.5 2 2c.2-.5.3-1 .3-1.5a2.5 2.5 0 0 0-2.3-2.5Zm6.5 4.9c.5.4.9.8 1.2 1.1a1 1 0 0 1 0 1.3C19.2 17.4 16 20 12 20c-1.5 0-2.8-.3-4-.9l-1.6 1.6-1.1-1.1L17.9 6.8l1.1 1.1ZM13.5 12l-1.5 1.5c.2.1.4.2.7.2.8 0 1.5-.7 1.5-1.5 0-.3-.1-.5-.2-.7Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <aside className="jobsSeekAside">
+          <div className="jobsSeekAsideCard">
+            <h4 className="jobsSeekAsideTitle">Saved jobs</h4>
+            <p className="jobsSeekAsideText">
+              Bookmark listings to track them here. Saved: <strong>{savedJobIds.size}</strong>
+            </p>
+          </div>
+          <div className="jobsSeekAsideCard">
+            <h4 className="jobsSeekAsideTitle">Better matches</h4>
+            <p className="jobsSeekAsideText">
+              Keep your profile and skills up to date so recommendations stay accurate.
+            </p>
+            <Link className="jobsSeekAsideLink" to="/candidate">
+              Profile & tools
+            </Link>
+          </div>
+
+          {selectedJob ? (
+            <div className="jobsSeekDetail">
+              <h4 className="jobsSeekDetailEyebrow">Job details</h4>
+              <h3 className="jobsSeekDetailTitle">{selectedJob.title}</h3>
+              <p className="jobsSeekDetailSub">{selectedJob.company_info || "Employer"}</p>
+              <div className="jobsSeekDetailTags">
+                <span>{selectedJob.location || "—"}</span>
+                <span>{formatWorkModeLabel(selectedJob.work_mode)}</span>
+                {selectedJob.job_category?.name && <span>{selectedJob.job_category.name}</span>}
+              </div>
+
+              {selectedJob._match && (
+                <div className="jobsSeekDetailMatch">
+                  <div className="jobsSeekDetailMatchTop">
+                    <span>Match</span>
+                    <strong>{matchScorePercent(selectedJob._match.score) ?? "—"}%</strong>
+                  </div>
+                  <div className="jobsSeekMatchTrack">
+                    <div
+                      className="jobsSeekMatchFill"
+                      style={{
+                        width: `${Math.min(100, Math.max(6, matchScorePercent(selectedJob._match.score) || 0))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(selectedJob.skills) && selectedJob.skills.length > 0 && (
+                <div className="jobsSeekSkillRow">
+                  {selectedJob.skills.slice(0, 8).map((s) => (
+                    <span className="jobsSeekSkillTag" key={s.id ?? s.skill_name}>
+                      {s.skill_name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="jobsSeekDesc">{selectedJob.jd_text || "No description provided."}</div>
+
+              {appliedJobIds.has(selectedJob.id) ? (
+                <p className="jobsSeekAppliedNote">You’ve applied to this role.</p>
+              ) : (
+                <button type="button" className="jobsSeekApply" onClick={() => applyToJob(selectedJob.id)}>
+                  Apply
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="jobsSeekAsideCard jobsSeekAsideMuted">
+              <p className="jobsSeekAsideText">Select a job to read the full description and apply.</p>
+            </div>
+          )}
+
+          <div className="jobsSeekAsideCard">
+            <h4 className="jobsSeekAsideTitle">Recent applications</h4>
+            {applications.length === 0 ? (
+              <p className="jobsSeekAsideText">None yet.</p>
+            ) : (
+              <ul className="jobsSeekAppMini">
+                {applications.slice(0, 5).map((a) => {
+                  const appJob = jobById.get(a.job);
+                  return (
+                    <li key={a.id}>
+                      <span className="jobsSeekAppMiniTitle">{appJob?.title || `Job #${a.job}`}</span>
+                      <span className="jobsSeekAppMiniMeta">
+                        {a.status} · {a.created_at ? String(a.created_at).slice(0, 10) : "—"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      <footer className="jobsSeekFooter">
+        © {new Date().getFullYear()} SkillMesh · {user?.email}
+      </footer>
+    </main>
+  );
+}

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from .geo_meta import STATES_BY_COUNTRY
 from .serializers import (
     CandidateRegisterSerializer,
     EmailTokenObtainPairSerializer,
@@ -90,6 +91,65 @@ class CountryAutocompleteView(views.APIView):
             return Response([])
 
 
+class StateRegionAutocompleteView(views.APIView):
+    """States / provinces for a country (ISO 3166-1 alpha-2). Empty list = type freely."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        cc = (request.query_params.get("country_code") or "").strip().upper()
+        q = (request.query_params.get("q") or "").strip().lower()
+        if not cc:
+            return Response([])
+        states = list(STATES_BY_COUNTRY.get(cc, []))
+        if q:
+            states = [s for s in states if q in s.lower()]
+        return Response([{"name": s} for s in states[:100]])
+
+
+class CityAutocompleteView(views.APIView):
+    """City/town suggestions via Nominatim, scoped by country (and optional state context)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        country_code = (request.query_params.get("country_code") or "").strip().lower()
+        state = (request.query_params.get("state") or "").strip()
+        if len(q) < 2 or not country_code:
+            return Response([])
+        try:
+            search_q = f"{q}, {state}" if state else q
+            rows = _http_json(
+                "https://nominatim.openstreetmap.org/search"
+                f"?format=jsonv2&addressdetails=1&limit=22&q={quote(search_q)}"
+                f"&countrycodes={quote(country_code)}"
+            )
+        except Exception:
+            return Response([])
+        cities = []
+        seen = set()
+        for row in rows:
+            addr = row.get("address", {})
+            city = (
+                addr.get("city")
+                or addr.get("town")
+                or addr.get("village")
+                or addr.get("municipality")
+                or addr.get("hamlet")
+            )
+            if not city:
+                continue
+            key = city.strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cities.append({"name": city.strip()})
+            if len(cities) >= 20:
+                break
+        return Response(cities)
+
+
 class AuPostcodeAutocompleteView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -149,4 +209,8 @@ class UsernameAvailabilityView(views.APIView):
         payload = {"username": username, "available": reason is None}
         if reason:
             payload["reason"] = reason
+            if reason == "taken":
+                existing = User.objects.filter(username__iexact=username).first()
+                if existing:
+                    payload["existing_role"] = existing.role
         return Response(payload)

@@ -61,6 +61,18 @@ body {
   flex-direction: column;
 }
 
+.homeHeaderLead {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.homeHeaderBack {
+  flex-shrink: 0;
+}
+
 .homeHeader {
   display: flex;
   justify-content: space-between;
@@ -93,6 +105,13 @@ body {
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.homeHeaderBrand:hover .homeHeaderWordmark {
+  color: #1d4ed8;
 }
 
 .homeHeaderLogo {
@@ -258,16 +277,27 @@ body {
   margin-right: auto;
 }
 
-.jobRow {
+.jobRowLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #e2e8f0;
+  transition: background 0.15s ease;
+}
+
+.jobRowLink:hover {
+  background: rgba(99, 102, 241, 0.07);
+}
+
+.jobRowInner {
   display: flex;
   justify-content: space-between;
   align-items: center;
   text-align: left;
   padding: 0.7rem 0.2rem;
-  border-bottom: 1px solid #e2e8f0;
 }
 
-.jobRow h4 {
+.jobRowInner h4 {
   margin: 0;
   font-size: 0.98rem;
 }
@@ -530,6 +560,137 @@ body {
   letter-spacing: 0.03em;
 }
 
+.authBrandLink {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.authBrandLink:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
+.authBrandLink:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
+/* Minimal employer login (/login?role=employer) */
+.authCardEmployerLogin {
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.35rem 1.5rem 1.5rem;
+  gap: 0.65rem;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.authEmployerLoginBrandRow {
+  display: flex;
+  justify-content: center;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.authCardEmployerLogin .authBrand {
+  margin: 0 auto;
+}
+
+.authEmployerLoginTitle {
+  margin: 0.15rem 0 0.1rem;
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.authEmployerLoginSubmit {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.72rem 1rem;
+  font-weight: 600;
+}
+
+.authEmployerLoginFooter {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.authEmployerLoginFooter a {
+  color: #4338ca;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.authEmployerLoginFooter a:hover {
+  text-decoration: underline;
+}
+
+.authTopBar {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  margin: -0.15rem 0 0.35rem;
+}
+
+.backNavBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  background: rgba(238, 242, 255, 0.88);
+  color: #4338ca;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.14s ease;
+}
+
+.backNavBtn:hover {
+  background: rgba(224, 231, 255, 0.98);
+  border-color: rgba(79, 70, 229, 0.42);
+  color: #312e81;
+  transform: scale(1.03);
+}
+
+.backNavBtn:active {
+  transform: scale(0.98);
+}
+
+.backNavBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
+.backNavBtnIcon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Tighter in sticky header next to logo */
+.homeHeader .backNavBtn {
+  width: 40px;
+  height: 40px;
+}
+
+.employerHomeTop {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.employerHomeBrandLink {
+  margin: 0;
+}
+
 .registerShell {
   padding: 1.25rem;
 }
@@ -545,6 +706,460 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #334155;
+}
+
+.registerEmployerInviteBanner {
+  grid-column: 1 / -1;
+  margin: 0 0 0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.95) 0%, rgba(238, 242, 255, 0.75) 100%);
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #312e81;
+}
+
+.registerEmployerInviteBanner strong:first-child {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4338ca;
+}
+
+.registerEmployerInviteBanner p {
+  margin: 0;
+}
+
+.registerEmployerGridFull {
+  grid-column: 1 / -1;
+}
+
+.registerEmployerLayout {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 840px) {
+  .registerEmployerLayout {
+    grid-template-columns: minmax(200px, 1fr) minmax(0, 1.35fr);
+    align-items: start;
+    gap: 1.75rem;
+  }
+}
+
+.registerEmployerAside {
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(238, 242, 255, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  box-shadow: 0 10px 28px rgba(67, 56, 202, 0.08);
+}
+
+.registerEmployerAsideTitle {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  color: #1e1b4b;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.registerEmployerAsideLead {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #4338ca;
+}
+
+.registerEmployerBullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.registerEmployerBullets li {
+  margin-bottom: 0.35rem;
+}
+
+.registerEmployerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.registerFieldLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0.15rem 0 0.05rem;
+}
+
+.registerEmployerFooter {
+  margin: 0.85rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.registerEmployerFooter a {
+  color: #4338ca;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.registerEmployerFooter a:hover {
+  text-decoration: underline;
+}
+
+.registerEmployerFooterSep {
+  margin: 0 0.35rem;
+  color: #94a3b8;
+}
+
+.employerOnboardingPage {
+  position: relative;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.25rem 0.85rem 3rem;
+}
+
+.employerOnboardingAmbient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.16), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(14, 165, 233, 0.08), transparent),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  pointer-events: none;
+}
+
+.employerOnboardingFrame {
+  position: relative;
+  padding: 1.35rem 1.35rem 1.6rem;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 4px 6px rgba(15, 23, 42, 0.04),
+    0 24px 48px rgba(30, 64, 175, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.employerOnboardingHeader {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.employerOnboardingTopRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  margin: 0 0 0.15rem;
+  min-height: 44px;
+}
+
+.employerOnboardingBackCell {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+}
+
+.employerOnboardingBrandCell {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+}
+
+.employerOnboardingBrandCell .authBrand {
+  margin: 0;
+}
+
+.employerOnboardingBackSpacer {
+  width: 42px;
+  height: 42px;
+  justify-self: end;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.employerOnboardingTitle {
+  margin: 0.55rem 0 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #0f172a;
+  text-align: center;
+}
+
+.employerOnboardingLead {
+  margin: 0 auto;
+  max-width: 34rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #64748b;
+  text-align: center;
+}
+
+.employerAddressFieldHint {
+  margin: -0.05rem 0 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.employerOnboardingError {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(254, 242, 242, 0.95);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.employerOnboardingPanels {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 880px) {
+  .employerOnboardingPanels {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .employerOnboardingPanelWide {
+    grid-column: 1 / -1;
+  }
+}
+
+.employerOnboardingPanel {
+  padding: 1.1rem 1.15rem 1.2rem;
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(248, 250, 252, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 1px solid rgba(203, 213, 225, 0.65);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.employerOnboardingPanelHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.employerOnboardingStep {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+
+.employerOnboardingPanelTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.02em;
+}
+
+.employerOnboardingPanelSub {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.employerOnboardingFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.employerOnboardingField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.employerOnboardingRow2 {
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (min-width: 560px) {
+  .employerOnboardingRow2 {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.employerIndustryOther {
+  margin-top: 0.35rem;
+}
+
+.employerOnboardingFooter {
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.employerOnboardingSubmit {
+  margin-top: 0;
+}
+
+.employerOnboardingGrid {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.employerOnboardingTextarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.45;
+}
+
+.employerOnboardingHint {
+  grid-column: 1 / -1;
+  margin: 0.1rem 0 0.25rem;
+}
+
+.authSelectWrap {
+  position: relative;
+  width: 100%;
+}
+
+.authSelectWrap::after {
+  content: "";
+  position: absolute;
+  right: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #64748b;
+  pointer-events: none;
+}
+
+select.authSelect {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  padding-right: 2.5rem;
+  appearance: none;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+}
+
+select.authSelect:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inputYearPlain {
+  -moz-appearance: textfield;
+}
+
+.inputYearPlain::-webkit-outer-spin-button,
+.inputYearPlain::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inputSoftWarn {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.authInputHasError,
+textarea.authInput.authInputHasError {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16);
+}
+
+select.authSelect.authInputHasError {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16);
+}
+
+.fieldErrorHint {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #b91c1c;
+}
+
+.employerJobsFieldInvalid {
+  padding: 0.5rem 0.55rem;
+  margin: 0 -0.55rem;
+  border-radius: 10px;
+  outline: 2px solid rgba(220, 38, 38, 0.45);
+  outline-offset: 2px;
+}
+
+.suggestWrap {
+  position: relative;
+  width: 100%;
+}
+
+.suggestionBoxElevated {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 200px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.employerAddressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.employerDashboardCompany {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.5rem 0 0.85rem;
+}
+
+.employerDashboardCompanyModern {
+  padding: 1rem 1rem 1.1rem;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.65);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.employerDashboardCompany textarea.authInput {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.employerDashboardCompany select.authInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
 }
 
 .authInput {
@@ -647,6 +1262,15 @@ body {
   color: #166534;
 }
 
+.dobPicker {
+  width: 100%;
+  min-width: 0;
+}
+
+.muiDobInput {
+  width: 100%;
+}
+
 .muiDobInput .MuiOutlinedInput-root {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
@@ -733,10 +1357,40 @@ body {
 }
 
 .onboardTop {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.5rem 0.75rem;
+}
+
+.onboardBrandWrap {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.onboardBrandWrap .authBrand {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.onboardTopEnd {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 4.5rem;
+}
+
+.onboardTopSpacer {
+  display: inline-block;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.onboardBackBtn {
+  justify-self: start;
 }
 
 .onboardResumeRow {
@@ -825,6 +1479,15 @@ body {
   margin: 0.45rem 0 0.8rem;
 }
 
+.categoryGridHasError {
+  outline: 2px solid rgba(220, 38, 38, 0.45);
+  outline-offset: 4px;
+  border-radius: 14px;
+  padding: 0.35rem;
+  margin-left: -0.35rem;
+  margin-right: -0.35rem;
+}
+
 .categoryPill {
   background: rgba(255, 255, 255, 0.9);
   color: #1e293b;
@@ -837,6 +1500,14 @@ body {
   background: rgba(99, 102, 241, 0.16);
   border-color: rgba(99, 102, 241, 0.55);
   color: #3730a3;
+}
+
+.registerPasswordApiErrors,
+.registerNameRowErrors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.15rem 0 0.35rem;
 }
 
 .resumePreviewModal {
@@ -1030,6 +1701,10 @@ button:hover {
   margin-bottom: 0.75rem;
 }
 
+.registerDobGrid {
+  align-items: stretch;
+}
+
 .chipWrap {
   display: flex;
   flex-wrap: wrap;
@@ -1106,6 +1781,143 @@ pre {
 .candidateHeaderActions {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.candidateProfileMenuRoot {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.candidateProfileTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.15rem 0.4rem 0.15rem 0.15rem;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  color: inherit;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.candidateProfileTrigger:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.candidateProfileTrigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.candidateProfileAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #4f46e5 55%, #7c3aed);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.candidateProfileChev {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid #475569;
+  border-bottom: 2px solid #475569;
+  transform: rotate(45deg);
+  margin-top: -0.2rem;
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.candidateProfileChevOpen {
+  transform: rotate(-135deg);
+  margin-top: 0.12rem;
+}
+
+.candidateProfileDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 232px;
+  padding: 0.45rem 0;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transition:
+    opacity 0.2s ease,
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0.2s;
+  pointer-events: none;
+}
+
+.candidateProfileDropdownOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.candidateProfileMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 1rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+a.candidateProfileMenuItem {
+  color: #334155;
+}
+
+.candidateProfileMenuItem:hover {
+  background: rgba(241, 245, 249, 0.95);
+  color: #0f172a;
+}
+
+.candidateProfileMenuRule {
+  margin: 0.35rem 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+.candidateProfileMenuDanger {
+  color: #b91c1c;
+}
+
+.candidateProfileMenuDanger:hover {
+  background: rgba(254, 226, 226, 0.65);
+  color: #991b1b;
+}
+
+.candidateScrollAnchor {
+  scroll-margin-top: 88px;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.candidateScrollSection {
+  scroll-margin-top: 88px;
 }
 
 .candidateHomePage .homeSection {
@@ -1296,7 +2108,4065 @@ pre {
   min-height: 100vh;
 }
 
-.candidateDashboardInner {
-  max-width: 1100px;
-  margin: 1rem auto 2rem;
+/* Keep hero grid lines from visually crossing body copy */
+.candidateDashboardPage .jobsSeekHero .heroMesh {
+  opacity: 0.16;
+  pointer-events: none;
 }
+
+.candidateDashboardPage .jobsSeekHero .jobsSeekHeroInner {
+  z-index: 2;
+}
+
+.employerDashboardPage .jobsSeekHero .heroMesh {
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.employerDashboardPage .jobsSeekHero .jobsSeekHeroInner {
+  z-index: 2;
+}
+
+.candidateDashLayoutWide {
+  grid-template-columns: 1fr;
+  max-width: 920px;
+}
+
+.employerDashPageLoading {
+  text-align: center;
+  margin: 2rem auto;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+  max-width: 1120px;
+}
+
+.employerDashTalentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .employerDashTalentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashTalentSearchBtn {
+  margin-top: 0.85rem;
+  width: 100%;
+  max-width: 280px;
+}
+
+.employerDashTalentDivider {
+  height: 1px;
+  margin: 1.25rem 0 1rem;
+  background: rgba(148, 163, 184, 0.35);
+  border: none;
+}
+
+.employerDashMatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.employerDashFieldGrow {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.employerDashMatchBtn {
+  flex: 0 0 auto;
+  min-height: 42px;
+  align-self: flex-end;
+}
+
+.employerDashMatchEmpty {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.employerDashResultsCard .employerDashTableScroll {
+  margin-top: 0.75rem;
+}
+
+.employerDashResultsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.employerDashTabBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.employerDashTab {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(248, 250, 252, 0.9);
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.employerDashTab:hover {
+  color: #334155;
+  background: #fff;
+}
+
+.employerDashTab[aria-selected="true"] {
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+/* Candidate dashboard (/candidate): same shell as job hub, profile-focused layout */
+.candidateDashHero {
+  padding-bottom: 1.1rem;
+}
+
+.candidateDashHeroInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.candidateDashHeroText {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.candidateDashTitle {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.candidateDashLead {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.candidateDashHeroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.candidateDashHeroActions .candidateDashBrowseCta {
+  min-height: 38px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.candidateDashHeroLink {
+  padding: 0.5rem 0;
+  line-height: 1.25;
+  align-self: center;
+}
+
+.candidateDashFlash {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+}
+
+.candidateDashBanner {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.95rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.candidateDashBannerSuccess {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #166534;
+}
+
+.candidateDashBannerError {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+
+.candidateDashLayout {
+  flex: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.75rem clamp(1rem, 3vw, 2rem) 2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .candidateDashLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.candidateDashMain {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.candidateDashAside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.candidateDashCard {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 18px;
+  padding: 1.35rem 1.4rem;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+}
+
+.candidateDashCardCompact {
+  padding: 1.1rem 1.2rem;
+}
+
+.candidateDashCardTitle {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.candidateDashCardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.candidateDashCardHead .candidateDashCardTitle {
+  margin-bottom: 0;
+}
+
+.candidateDashCardHint {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.candidateDashSubheading {
+  margin: 1.25rem 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.candidateDashFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+@media (max-width: 560px) {
+  .candidateDashFormGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.candidateDashSpan2 {
+  grid-column: 1 / -1;
+}
+
+.candidateDashTextarea {
+  resize: vertical;
+  min-height: 6.5rem;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+.candidateDashSkillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.candidateDashSkillRow .jobsSeekInput {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.candidateDashSkillAdd {
+  flex: 0 0 auto;
+  padding: 0.72rem 1.15rem;
+  font-size: 0.88rem;
+}
+
+.candidateDashChipRow {
+  margin-bottom: 1rem;
+}
+
+.candidateDashSkillChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.55rem 0.38rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.08);
+  color: #3730a3;
+}
+
+.candidateDashSkillRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.candidateDashSkillRemove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+.candidateDashSave {
+  margin-top: 0.25rem;
+}
+
+.candidateDashSaveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.candidateDashSaveRow .candidateDashSave {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.candidateDashSaveRowAfterResume {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  justify-content: flex-end;
+}
+
+.candidateDashSaveRowAfterResume .candidateDashSave {
+  width: 100%;
+  max-width: 320px;
+  margin-left: auto;
+}
+
+@media (max-width: 520px) {
+  .candidateDashSaveRowAfterResume .candidateDashSave {
+    max-width: none;
+    margin-left: 0;
+  }
+}
+
+.candidateDashTextBtnInline {
+  margin-bottom: 0;
+  align-self: center;
+}
+
+.candidateDashResumeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.candidateDashFile {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.candidateDashMeter {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.candidateDashMeterBar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8, #6366f1, #a855f7);
+  transition: width 0.4s ease;
+}
+
+.candidateDashMeterLabel {
+  margin: 0.4rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.candidateDashEmpty {
+  margin: 0.35rem 0 0;
+  font-size: 0.86rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.candidateDashMatchList {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.candidateDashMatchItem {
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.candidateDashMatchItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.candidateDashMatchTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.candidateDashMatchTitle {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.candidateDashMatchScore {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.12);
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+}
+
+.candidateDashMatchMeta {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.candidateDashApplied {
+  margin: 0.45rem 0 0;
+}
+
+.candidateDashApplyMini {
+  margin-top: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
+  width: auto;
+  align-self: flex-start;
+}
+
+/* Profile dashboard: single-column, minimal */
+.candidateDashLayoutSolo {
+  grid-template-columns: 1fr;
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.candidateDashCardProfile {
+  padding-top: 1.25rem;
+}
+
+.candidateDashProfileHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.candidateDashCardHintTight {
+  margin: 0.15rem 0 0;
+  font-size: 0.84rem;
+}
+
+.candidateDashStrengthMini {
+  flex-shrink: 0;
+}
+
+.candidateDashStrengthRing {
+  --p: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: conic-gradient(#6366f1 0deg, #6366f1 calc(var(--p) * 3.6deg), rgba(226, 232, 240, 0.95) calc(var(--p) * 3.6deg));
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #312e81;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.candidateDashStrengthRing span {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+
+.candidateDashCategoryGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1.1rem;
+}
+
+.candidateDashCatPill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.candidateDashCatPill:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #3730a3;
+}
+
+.candidateDashCatPillOn {
+  border-color: rgba(99, 102, 241, 0.65);
+  background: rgba(99, 102, 241, 0.12);
+  color: #312e81;
+}
+
+.candidateDashSkillWrap {
+  position: relative;
+  margin-bottom: 0.35rem;
+}
+
+.candidateDashSuggestList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0.25rem 0;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+}
+
+.candidateDashSuggestItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.85rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.88rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.candidateDashSuggestItem:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #1e1b4b;
+}
+
+.candidateDashMiniCard {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(248, 250, 252, 0.65);
+}
+
+.candidateDashMiniActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.45rem;
+}
+
+.candidateDashMiniBtn {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.candidateDashTextBtn {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #4f46e5;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.candidateDashTextBtn:hover {
+  color: #3730a3;
+}
+
+.candidateDashTextareaSm {
+  min-height: 4rem;
+  margin-top: 0.5rem;
+}
+
+.candidateDashDobField {
+  min-width: 0;
+}
+
+.candidateDashDobField .MuiFormControl-root {
+  width: 100%;
+}
+
+.candidateDashMiniActionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.candidateDashDropzone {
+  position: relative;
+  border: 1.5px dashed rgba(99, 102, 241, 0.4);
+  border-radius: 16px;
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(99, 102, 241, 0.04);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
+}
+
+.candidateDashDropzone:hover,
+.candidateDashDropzone:focus-visible {
+  border-color: rgba(99, 102, 241, 0.65);
+  background: rgba(99, 102, 241, 0.07);
+  outline: none;
+}
+
+.candidateDashDropzoneActive {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.11);
+  transform: scale(1.005);
+}
+
+.candidateDashDropInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  opacity: 0;
+}
+
+.candidateDashDropzoneInner {
+  pointer-events: none;
+}
+
+.candidateDashDropTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.candidateDashDropMeta {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.candidateDashResumeList {
+  list-style: none;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.candidateDashResumeItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.candidateDashResumeMain {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.candidateDashResumeNameInput {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.candidateDashResumeFile {
+  font-size: 0.78rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.candidateDashResumeDate {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.candidateDashResumeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.candidateDashResumeLink {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.candidateDashResumeLink:hover {
+  text-decoration: underline;
+}
+
+.candidateDashResumeOpenBtn {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4f46e5;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.15rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.candidateDashResumeOpenBtn:hover {
+  color: #3730a3;
+}
+
+.candidateDashResumeDanger {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(254, 242, 242, 0.8);
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.candidateDashResumeDanger:hover {
+  background: rgba(254, 226, 226, 0.95);
+}
+
+/* Jobs hub: Seek-style layout (search + tabs + cards + sidebar), SkillMesh landing theme */
+.jobsSeekPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+  color: #0f172a;
+}
+
+.jobsSeekHero {
+  position: relative;
+  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 1.35rem;
+  /* visible so “More options” + filter pill menus aren’t clipped (glows stay inside via mask) */
+  overflow: visible;
+  background: #f8f8f7;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.jobsSeekHero .heroGlow {
+  opacity: 0.38;
+}
+
+.jobsSeekHero .heroMesh {
+  opacity: 0.85;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 40%, black 25%, transparent 100%);
+}
+
+.jobsSeekHeroKicker {
+  margin: 0 0 0.85rem;
+  text-align: left;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.jobsSeekHeroDecor {
+  display: none;
+}
+
+.jobsSeekHeroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.jobsSeekSearchGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .jobsSeekSearchGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jobsSeekFieldBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.jobsSeekFieldLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.jobsSeekWhatRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 200px);
+  gap: 0.55rem;
+}
+
+@media (max-width: 520px) {
+  .jobsSeekWhatRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jobsSeekInput,
+.jobsSeekSelect {
+  width: 100%;
+  padding: 0.78rem 0.9rem;
+  font-size: 0.96rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.jobsSeekInput:focus,
+.jobsSeekSelect:focus {
+  outline: none;
+  border-color: rgba(15, 23, 42, 0.22);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.jobsSeekSelect {
+  cursor: pointer;
+}
+
+.jobsSeekCtaWrap {
+  display: flex;
+  align-items: flex-end;
+}
+
+.jobsSeekCta {
+  min-height: 48px;
+  padding: 0 1.25rem;
+  font-size: 0.94rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #fafafa;
+  cursor: pointer;
+  background: #1e293b;
+  box-shadow: none;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.jobsSeekCta:hover:not(:disabled) {
+  background: #0f172a;
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
+.jobsSeekCta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.jobsSeekMoreToggle {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: none;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.25rem 0;
+  transition: color 0.18s ease;
+}
+
+.jobsSeekMoreToggle:hover {
+  color: #0f172a;
+}
+
+.jobsSeekMoreChev {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  margin-top: -0.2rem;
+}
+
+.jobsSeekMoreToggleOpen .jobsSeekMoreChev {
+  transform: rotate(-135deg);
+  margin-top: 0.15rem;
+}
+
+/* max-height animates reliably; grid 0fr→1fr stays at 0 with auto-height parents */
+.jobsSeekMoreShell {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.jobsSeekMoreShellOpen {
+  max-height: min(720px, 85vh);
+  overflow: visible;
+}
+
+.jobsSeekMoreOverflow {
+  min-height: 0;
+}
+
+.jobsSeekMorePanel {
+  margin-top: 0.85rem;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: none;
+}
+
+.jobsSeekFilterPillRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.jobsSeekPillWrap {
+  position: relative;
+  z-index: 1;
+}
+
+.jobsSeekPillWrap:has(.jobsSeekFilterPillOpen) {
+  z-index: 25;
+}
+
+.jobsSeekFilterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.jobsSeekFilterPill:hover {
+  border-color: rgba(15, 23, 42, 0.18);
+  background: #fafafa;
+}
+
+.jobsSeekFilterPillOpen {
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #f1f5f9;
+}
+
+.jobsSeekFilterPillText {
+  white-space: nowrap;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .jobsSeekFilterPillText {
+    max-width: 200px;
+  }
+}
+
+.jobsSeekFilterPillChev {
+  flex-shrink: 0;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-right: 2px solid #64748b;
+  border-bottom: 2px solid #64748b;
+  transform: rotate(45deg);
+  margin-top: -0.18rem;
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.jobsSeekFilterPillOpen .jobsSeekFilterPillChev {
+  transform: rotate(-135deg);
+  margin-top: 0.12rem;
+  border-color: #475569;
+}
+
+.jobsSeekPillDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: min(100%, 220px);
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.97);
+  transition:
+    opacity 0.2s ease,
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0.2s;
+  pointer-events: none;
+}
+
+.jobsSeekPillDropdownOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.jobsSeekPillDropdownInner {
+  padding: 0.35rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  max-height: min(260px, 48vh);
+  overflow-y: auto;
+}
+
+.jobsSeekPillOption {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.jobsSeekPillOption:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.jobsSeekPillOptionOn {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.jobsSeekFilterHint {
+  margin: 0 0 0.65rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.jobsSeekMoreRefresh {
+  margin-top: 0.15rem;
+}
+
+.jobsSeekMoreLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.45rem;
+}
+
+.jobsSeekChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.jobsSeekChip {
+  padding: 0.38rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  color: #475569;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.jobsSeekChip:hover {
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+.jobsSeekChipOn {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+}
+
+.jobsSeekLinkBtn {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #475569;
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.jobsSeekRecentBar {
+  background: #fff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 0.55rem clamp(1rem, 3vw, 2rem);
+}
+
+.jobsSeekRecentInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.jobsSeekRecentChip {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #334155;
+  background: #fafafa;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.jobsSeekRecentChip:hover {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.jobsSeekFlash {
+  max-width: 1120px;
+  margin: 0.5rem auto 0;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+}
+
+.jobsSeekBody {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.5rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 3vw, 2rem) 2.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .jobsSeekBody {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jobsSeekMain {
+  min-width: 0;
+}
+
+.jobsSeekTabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 0.65rem;
+}
+
+.jobsSeekTab {
+  position: relative;
+  padding: 0.5rem 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.jobsSeekTab:hover:not(:disabled) {
+  color: #0f172a;
+}
+
+.jobsSeekTab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.jobsSeekTabOn {
+  color: #0f172a;
+}
+
+.jobsSeekTabOn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #0f172a;
+}
+
+.jobsSeekTabClear {
+  margin-left: auto;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.5rem 0;
+}
+
+.jobsSeekListMeta {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.jobsSeekCardList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.jobsSeekEmpty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.jobsSeekCard {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  text-align: left;
+  box-shadow: none;
+}
+
+.jobsSeekCard:hover {
+  border-color: rgba(15, 23, 42, 0.14);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.jobsSeekCardActive {
+  border-color: rgba(15, 23, 42, 0.22);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.jobsSeekCard:focus {
+  outline: none;
+}
+
+.jobsSeekCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.12);
+}
+
+.jobsSeekCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.jobsSeekCardText {
+  min-width: 0;
+}
+
+.jobsSeekCardTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.jobsSeekCardTitleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.jobsSeekCardTitleLink:hover {
+  color: #334155;
+  text-decoration: underline;
+}
+
+.jobsSeekCardCompany {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.jobsSeekCardBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.jobsSeekBadge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.jobsSeekBadgeRec {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.jobsSeekBadgeNew {
+  background: #fafafa;
+  color: #64748b;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.jobsSeekBadgeApp {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.jobsSeekCardFacts {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.84rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.jobsSeekCardLogo {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.jobsSeekCardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.jobsSeekCardPosted {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.jobsSeekCardActions {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.jobsSeekIconBtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.jobsSeekIconBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.jobsSeekIconBtnOn {
+  color: #0f172a;
+}
+
+.jobsSeekAside {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0.75rem;
+}
+
+@media (max-width: 960px) {
+  .jobsSeekAside {
+    position: static;
+  }
+}
+
+.jobsSeekAsideCard {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  box-shadow: none;
+}
+
+.jobsSeekAsideMuted {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.jobsSeekAsideTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.jobsSeekAsideText {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.jobsSeekAsideLink {
+  display: inline-block;
+  margin-top: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #334155;
+  text-decoration: none;
+}
+
+.jobsSeekAsideLink:hover {
+  text-decoration: underline;
+}
+
+.jobsSeekDetail {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 1.1rem 1.15rem;
+  box-shadow: none;
+}
+
+.jobsSeekDetailEyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.jobsSeekDetailPermalinkWrap {
+  margin: 0 0 0.5rem;
+}
+
+.jobsSeekDetailPermalink {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+}
+
+.jobsSeekDetailPermalink:hover {
+  text-decoration: underline;
+}
+
+.jobsSeekLoginToApply {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.jobsSeekLoginToApply a {
+  font-weight: 500;
+  color: #334155;
+}
+
+.jobsSeekDetailTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.jobsSeekDetailSub {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.jobsSeekDetailTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.jobsSeekDetailTags span {
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.28rem 0.55rem;
+  background: #fafafa;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  color: #64748b;
+}
+
+.jobsSeekDetailMatch {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.jobsSeekDetailMatchTop {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  margin-bottom: 0.35rem;
+  color: #475569;
+}
+
+.jobsSeekDetailMatchTop strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.jobsSeekMatchTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  border: none;
+}
+
+.jobsSeekMatchFill {
+  height: 100%;
+  border-radius: inherit;
+  background: #64748b;
+  transition: width 0.25s ease;
+}
+
+.jobsSeekSkillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.jobsSeekSkillTag {
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.28rem 0.5rem;
+  background: #fafafa;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  color: #475569;
+}
+
+.jobsSeekPayLine {
+  font-size: 0.84rem;
+  color: #475569;
+  margin: 0 0 0.65rem;
+  line-height: 1.45;
+}
+
+.jobsSeekDesc {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #334155;
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.jobsSeekApply {
+  width: 100%;
+  padding: 0.78rem 1rem;
+  font-size: 0.94rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #fafafa;
+  cursor: pointer;
+  background: #1e293b;
+  box-shadow: none;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.jobsSeekApply:hover {
+  background: #0f172a;
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
+.jobsSeekAppliedNote {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.jobsSeekAppMini {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.jobsSeekAppMini li {
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.jobsSeekAppMini li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jobsSeekAppMiniTitle {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.jobsSeekAppMiniMeta {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.jobsSeekFooter {
+  text-align: center;
+  padding: 0.85rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+.jobPublicDetailPage {
+  min-height: 100vh;
+}
+
+.jobPublicDetailShell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
+}
+
+.jobPublicDetailShell .jobsSeekDetail {
+  margin-top: 0.5rem;
+}
+
+.jobPublicDetailError {
+  padding: 0.5rem 0 1rem;
+}
+
+.jobPublicLoading {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+}
+
+/* —— Global job detail page (/jobs/:id) —— */
+.jobDetailPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.55) 42%, #f8fafc 100%);
+}
+
+.jobDetailPageError .jobDetailPageInner {
+  padding-top: 1rem;
+}
+
+.jobDetailPageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.jobDetailPageHeaderLead {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.jobDetailPageHeaderNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.jobDetailPageNavLink {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.jobDetailPageNavLink:hover {
+  text-decoration: underline;
+}
+
+.jobDetailPageHero {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0.85rem 1.15rem 0;
+  box-sizing: border-box;
+}
+
+.jobDetailBreadcrumb {
+  font-size: 0.8rem;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.jobDetailBreadcrumb a {
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.jobDetailBreadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.jobDetailBreadcrumbSep {
+  opacity: 0.45;
+  user-select: none;
+}
+
+.jobDetailBreadcrumbCurrent {
+  font-weight: 600;
+  color: #334155;
+  max-width: min(100%, 42ch);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobDetailPageInner {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0.5rem 1rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.jobDetailPageInner .jobsSeekDetail {
+  margin-top: 0.35rem;
+}
+
+.jobDetailPageLoading {
+  padding: 1rem 0;
+}
+
+.jobDetailPreviewBanner {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.85), rgba(253, 230, 138, 0.35));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #78350f;
+}
+
+.jobDetailPreviewBanner strong {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+  color: #92400e;
+}
+
+.jobDetailPreviewBanner p {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.jobDetailPreviewEdit {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #fff !important;
+}
+
+.jobDetailPreviewEdit:hover {
+  filter: brightness(1.08);
+}
+
+.jobDetailMetaBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.jobDetailPosted {
+  font-weight: 600;
+  color: #475569;
+}
+
+.jobDetailShareHint {
+  font-size: 0.78rem;
+}
+
+.jobDetailPageErrorActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.jobDetailPageBtnPrimary,
+.jobDetailPageBtnSecondary {
+  display: inline-block;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.jobDetailPageBtnPrimary {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #fff !important;
+  border: 1px solid transparent;
+}
+
+.jobDetailPageBtnSecondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155 !important;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.jobDetailPageTextLink {
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.jobDetailPageTextLink:hover {
+  text-decoration: underline;
+}
+
+.jobsSeekDetailFullPage {
+  padding: 1.15rem 1.25rem 1.35rem;
+}
+
+.jobsSeekDetailFullPage .jobsSeekDetailTitle {
+  font-size: 1.35rem;
+}
+
+.jobsSeekDescFull {
+  max-height: none;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.jobsSeekDetailReq {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(239, 246, 255, 0.75);
+  border: 1px solid rgba(147, 197, 253, 0.45);
+}
+
+.jobsSeekDetailReqLine {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #1e3a5f;
+  line-height: 1.45;
+}
+
+.jobsSeekDetailReqLine + .jobsSeekDetailReqLine {
+  margin-top: 0.35rem;
+}
+
+.jobsSeekDetailReqLine strong {
+  color: #1e40af;
+  margin-right: 0.35rem;
+}
+
+.jobsSeekEmployerPreviewNote,
+.jobsSeekEmployerBrowseNote {
+  margin: 0.75rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.jobsSeekDetailSection {
+  margin-top: 1rem;
+}
+
+.jobsSeekDetailSection:first-of-type {
+  margin-top: 0.35rem;
+}
+
+.jobsSeekDetailSectionTitle {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.jobsSeekBulletList {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.jobsSeekBulletList li {
+  margin-bottom: 0.35rem;
+}
+
+.jobsSeekBulletList li:last-child {
+  margin-bottom: 0;
+}
+
+.jobsSeekDetailSubBlock {
+  margin-top: 0.75rem;
+}
+
+.jobsSeekDetailSubBlock:first-child {
+  margin-top: 0;
+}
+
+.jobsSeekDescSection {
+  margin-bottom: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.jobsSeekDetailFullPage .jobsSeekDescSection {
+  max-height: none;
+}
+
+/* —— Employer job listings (manage / create) —— */
+.employerJobsPage {
+  min-height: 100vh;
+  padding: 1rem 1rem 2rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.employerJobsPage input[type="number"].employerJobsNumberPlain {
+  -moz-appearance: textfield;
+}
+
+.employerJobsPage input[type="number"].employerJobsNumberPlain::-webkit-outer-spin-button,
+.employerJobsPage input[type="number"].employerJobsNumberPlain::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.employerJobsAmbient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 85% 60% at 12% 0%, rgba(99, 102, 241, 0.12), transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 10%, rgba(14, 165, 233, 0.09), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 48% 100%, rgba(139, 92, 246, 0.07), transparent 48%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.employerJobsFrame {
+  position: relative;
+  z-index: 1;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 40px rgba(15, 23, 42, 0.06);
+  animation: fadeInUp 380ms ease both;
+}
+
+.employerJobsHeader {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.employerJobsTopRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.employerJobsBackCell {
+  justify-self: start;
+}
+
+.employerJobsBrandCell {
+  justify-self: center;
+}
+
+.employerJobsBrandCell .authBrand {
+  transform: scale(0.95);
+}
+
+.employerJobsBackSpacer {
+  width: 2.75rem;
+}
+
+.employerJobsTitle {
+  margin: 0 0 0.4rem;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.employerJobsLead {
+  margin: 0 0 0.55rem;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: #64748b;
+  max-width: 40rem;
+}
+
+.employerJobsSubnav {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.employerJobsDashLink {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.employerJobsDashLink:hover {
+  text-decoration: underline;
+}
+
+.employerJobsSubnavSep {
+  margin: 0 0.35rem;
+  color: #cbd5e1;
+  user-select: none;
+}
+
+.employerJobsFlash {
+  margin: 0.5rem 0 0;
+}
+
+.employerJobsError {
+  margin: 0.5rem 0 0;
+}
+
+.employerJobsLoading {
+  margin: 1.25rem 0;
+}
+
+.employerJobsLayout {
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .employerJobsLayout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .employerJobsListCol {
+    position: static;
+    max-height: none;
+  }
+
+  .employerJobsList {
+    max-height: min(36vh, 280px);
+  }
+}
+
+.employerJobsListCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.88) 100%);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+@media (min-width: 901px) {
+  .employerJobsListCol {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+.employerJobsSidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.employerJobsSidebarTitle {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+}
+
+.employerJobsSidebarCount {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+
+.employerJobsNewBtn {
+  width: 100%;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.employerJobsNewBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+}
+
+.employerJobsEmptyList {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding: 0.75rem 0.5rem;
+}
+
+.employerJobsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
+  min-height: 0;
+  max-height: min(58vh, 480px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+.employerJobsListItem {
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.employerJobsListItem:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+.employerJobsListItemActive {
+  border-color: rgba(79, 70, 229, 0.55);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.employerJobsListTitle {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.employerJobsListMeta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.employerJobsListFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.employerJobsStatusPill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+.employerJobsListDate {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.employerJobsEditorCol {
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(252, 252, 255, 0.96) 100%);
+  padding: 0;
+  min-height: 320px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.045);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.employerJobsEditorScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.15rem 1.25rem 0.5rem;
+  scrollbar-width: thin;
+}
+
+.employerJobsPlaceholder {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.employerJobsPlaceholderIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(14, 165, 233, 0.1));
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6366f1;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.employerJobsPlaceholderNewBtn {
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.employerJobsPlaceholderNewBtn:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(14, 165, 233, 0.14));
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+}
+
+.employerJobsPlaceholderNewBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+}
+
+.employerJobsPlaceholderNewBtn:active {
+  transform: scale(0.96);
+}
+
+.employerJobsPlaceholderInlineNew {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: #4f46e5;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(79, 70, 229, 0.35);
+  text-underline-offset: 2px;
+}
+
+.employerJobsPlaceholderInlineNew:hover {
+  color: #4338ca;
+  text-decoration-color: rgba(67, 56, 202, 0.55);
+}
+
+.employerJobsPlaceholderInlineNew:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.65);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.employerJobsPlaceholderTitle {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.employerJobsPlaceholder .muted {
+  max-width: 22rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.employerJobsEditorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.employerJobsEditorTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.employerJobsGhostBtn {
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(248, 250, 252, 0.9);
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.employerJobsGhostBtn:hover {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.employerJobsGhostBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.employerJobsDraftBtn {
+  min-width: 8.5rem;
+  padding: 0.65rem 1.1rem;
+  font-weight: 700;
+}
+
+.employerJobsFields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.employerJobsFormSection {
+  border-radius: 14px;
+  border: 1px solid rgba(241, 245, 249, 0.95);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 1rem 1.05rem 1.05rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.employerJobsFormSectionTitle {
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.98);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6366f1;
+}
+
+.employerJobsSectionIntro {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.employerJobsOfferList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.employerJobsOfferRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.employerJobsOfferRow .authInput {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.employerJobsOfferRemove {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.employerJobsAddBulletBtn {
+  margin-top: 0.45rem;
+  align-self: flex-start;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(99, 102, 241, 0.45);
+  background: rgba(99, 102, 241, 0.06);
+  color: #4338ca;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.employerJobsAddBulletBtn:hover {
+  background: rgba(99, 102, 241, 0.11);
+  border-color: rgba(99, 102, 241, 0.65);
+}
+
+.employerJobsFieldMacro {
+  gap: 0.65rem;
+}
+
+.employerJobsBulletBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+}
+
+.employerJobsBulletBlock:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.employerJobsFormSection .employerJobsRow2:last-child {
+  margin-bottom: 0;
+}
+
+.employerJobsField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.employerJobsFormSection .employerJobsField .authInput,
+.employerJobsFormSection .employerJobsField .authSelect {
+  border-radius: 11px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.employerJobsLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.employerJobsRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .employerJobsRow2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerJobsTextarea {
+  resize: vertical;
+  min-height: 160px;
+  line-height: 1.45;
+}
+
+.employerJobsField .employerJobsTextarea[rows="3"] {
+  min-height: 4.5rem;
+}
+
+.employerJobsFieldHint {
+  font-size: 0.78rem;
+  margin: -0.1rem 0 0;
+}
+
+.employerJobsClosingDateField {
+  width: 100%;
+}
+
+.employerJobsClosingDateField .muiDobInput {
+  width: 100%;
+}
+
+.employerJobsPayRangeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.employerJobsPayRangeRow .authInput {
+  text-align: left;
+}
+
+.employerJobsSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.employerJobsSkillRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.employerJobsSkillSuggestWrap {
+  position: relative;
+}
+
+.employerJobsSuggestList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0.2rem 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  background: #fff;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.1);
+  scrollbar-width: thin;
+}
+
+.employerJobsSuggestItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  font-size: 0.88rem;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.employerJobsSuggestItem:hover {
+  background: rgba(238, 242, 255, 0.95);
+}
+
+.employerJobsSkillRow .authInput {
+  flex: 1;
+  min-width: 160px;
+}
+
+.employerJobsSkillAdd {
+  flex-shrink: 0;
+}
+
+.employerJobsChips {
+  margin-top: 0.35rem;
+}
+
+.employerJobsChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.35rem;
+}
+
+.employerJobsChipRemove {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.employerJobsChipRemove:hover {
+  color: #b91c1c;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.employerJobsStickyActions {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem 1.15rem;
+  margin-top: auto;
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(248, 250, 252, 0.98) 35%, #f8fafc 100%);
+  backdrop-filter: blur(10px);
+}
+
+.employerJobsSaveBtn {
+  min-width: 9.5rem;
+  border-radius: 12px;
+  padding: 0.7rem 1.25rem;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.employerJobsSaveBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+}
+
+.employerJobsSaveBtn:disabled {
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
+/* —— Employer dashboard (overview) —— */
+.employerDashPage {
+  min-height: 100vh;
+  padding: 1.25rem 1rem 2.5rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.employerDashAmbient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 75% 50% at 12% 0%, rgba(99, 102, 241, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 92% 15%, rgba(14, 165, 233, 0.08), transparent 50%),
+    radial-gradient(ellipse 55% 40% at 48% 100%, rgba(139, 92, 246, 0.06), transparent 45%);
+}
+
+.employerDashShell {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.employerDashTopBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 10px 36px rgba(15, 23, 42, 0.06);
+}
+
+.employerDashTitle {
+  margin: 0 0 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.employerDashSubtitle {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: #64748b;
+  max-width: 36rem;
+}
+
+.employerDashSignedIn {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.employerDashSignedInEmail {
+  color: #475569;
+  font-weight: 600;
+}
+
+.employerDashTopBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.employerDashBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.employerDashBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.employerDashBtnPrimary {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 45%, #7c3aed 100%);
+  color: #fff;
+  border-color: rgba(79, 70, 229, 0.35);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+}
+
+.employerDashBtnPrimary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.34);
+}
+
+.employerDashBtnSecondary {
+  background: rgba(255, 255, 255, 0.95);
+  color: #312e81;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.employerDashBtnSecondary:hover:not(:disabled) {
+  background: rgba(238, 242, 255, 0.98);
+  border-color: rgba(79, 70, 229, 0.45);
+}
+
+.employerDashBtnGhost {
+  background: rgba(248, 250, 252, 0.9);
+  color: #475569;
+  border-color: rgba(203, 213, 225, 0.95);
+}
+
+.employerDashBtnGhost:hover:not(:disabled) {
+  background: #fff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.employerDashBtnBlock {
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.employerDashFlash {
+  margin: 0 0 1rem;
+}
+
+.employerDashLoading {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.employerDashStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .employerDashStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .employerDashStats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashStatCard {
+  padding: 1rem 1.05rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 5.5rem;
+}
+
+.employerDashStatCardAccent {
+  background: linear-gradient(145deg, rgba(238, 242, 255, 0.95) 0%, rgba(255, 255, 255, 0.92) 100%);
+  border-color: rgba(165, 180, 252, 0.45);
+}
+
+.employerDashStatLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.employerDashStatValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.employerDashStatValueText {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.employerDashStatHint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.employerDashLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1.25rem;
+  align-items: start;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .employerDashLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashMainCol {
+  min-width: 0;
+}
+
+.employerDashAsideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.employerDashCard {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(226, 232, 240, 0.98);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+  padding: 1.2rem 1.25rem 1.25rem;
+}
+
+.employerDashCardPromo {
+  background: linear-gradient(155deg, rgba(238, 242, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 55%);
+  border-color: rgba(165, 180, 252, 0.4);
+}
+
+.employerDashCardTable {
+  padding-bottom: 0.85rem;
+}
+
+.employerDashCardHead {
+  margin-bottom: 1rem;
+}
+
+.employerDashCardHeadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.employerDashCardTitle {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.employerDashCardLead {
+  margin: 0.4rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.employerDashCardFooter {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(241, 245, 249, 0.98);
+}
+
+.employerDashPill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+}
+
+.employerDashFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+@media (max-width: 640px) {
+  .employerDashFieldGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.employerDashFieldFull {
+  grid-column: 1 / -1;
+}
+
+.employerDashLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.employerDashSubheading {
+  margin: 1rem 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.employerDashTextarea {
+  resize: vertical;
+  min-height: 100px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.employerDashCompanyForm {
+  margin-top: 0.25rem;
+}
+
+.employerDashCompanyForm .employerDashboardCompanyModern {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.employerDashCompanyForm .employerAddressBlock {
+  margin-top: 0.25rem;
+}
+
+.employerDashResultsRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .employerDashResultsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashTableScroll {
+  margin: 0 -0.15rem;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  overflow: hidden;
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.employerDashTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.employerDashTable thead {
+  background: rgba(241, 245, 249, 0.95);
+}
+
+.employerDashTable th {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.98);
+}
+
+.employerDashTable td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.98);
+  color: #334155;
+  vertical-align: top;
+}
+
+.employerDashTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.employerDashTable tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.employerDashTdStrong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.employerDashTableEmpty {
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+.employerDashTableEmptyTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerDashTableEmptyText {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #64748b;
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.employerDashEmptyInline {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.employerDashEmptyText {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.employerDashInlineLink {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.employerDashInlineLink:hover {
+  text-decoration: underline;
+}
+
+.employerOnboardingDashBack {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.employerOnboardingDashBack:hover {
+  background: rgba(238, 242, 255, 0.9);
+  border-color: rgba(165, 180, 252, 0.5);
+}
+
+.employerDashCardSnapshot {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 242, 255, 0.35) 100%);
+}
+
+.employerDashSnapshotRow {
+  display: flex;
+  gap: 1.1rem;
+  align-items: flex-start;
+}
+
+.employerDashSnapshotAvatar {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #6366f1 0%, #7c3aed 100%);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(79, 70, 229, 0.28);
+}
+
+.employerDashSnapshotBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.employerDashSnapshotMeta {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.employerDashSnapshotDesc {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.employerDashSnapshotActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.employerDashAnalyticsRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .employerDashAnalyticsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashCardFlex {
+  display: flex;
+  flex-direction: column;
+}
+
+.employerDashStackedBar {
+  margin: 0.75rem 0 0.5rem;
+}
+
+.employerDashStackedBarInner {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.employerDashStackedBarEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  padding: 0.35rem;
+}
+
+.employerDashStackSeg {
+  min-width: 2px;
+  transition: width 240ms ease;
+}
+
+.employerDashStackSegOpen {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.employerDashStackSegDraft {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.employerDashStackSegClosed {
+  background: linear-gradient(90deg, #94a3b8, #64748b);
+}
+
+.employerDashStackSegOther {
+  background: linear-gradient(90deg, #a78bfa, #7c3aed);
+}
+
+.employerDashLegend {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.employerDashLegend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.employerDashLegendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.employerDashLegendSwatchOpen {
+  background: #16a34a;
+}
+
+.employerDashLegendSwatchDraft {
+  background: #d97706;
+}
+
+.employerDashLegendSwatchClosed {
+  background: #64748b;
+}
+
+.employerDashLegendSwatchOther {
+  background: #7c3aed;
+}
+
+.employerDashChecklist {
+  list-style: none;
+  margin: 0.5rem 0 0.85rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.employerDashCheckItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.employerDashCheckItemDone {
+  color: #334155;
+}
+
+.employerDashCheckIcon {
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-weight: 800;
+  color: #94a3b8;
+}
+
+.employerDashCheckItemDone .employerDashCheckIcon {
+  color: #16a34a;
+}
+
+.employerDashRecentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.employerDashRecentItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.98);
+}
+
+.employerDashRecentLink {
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
+  margin: 0 -0.35rem;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.employerDashRecentLink:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.employerDashRecentList li:last-child .employerDashRecentItem {
+  border-bottom: none;
+}
+
+.employerDashRecentMain {
+  min-width: 0;
+}
+
+.employerDashRecentTitle {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.employerDashRecentSub {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.employerDashRecentPill {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+}
+
+.employerDashTextLink {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.employerDashTextLink:hover {
+  text-decoration: underline;
+}
+
+.employerDashMiniEmpty {
+  text-align: center;
+  padding: 1.25rem 0.75rem 0.5rem;
+}
+
+.employerDashMiniEmptyTitle {
+  margin: 0.65rem 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerDashMiniEmptyText {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #64748b;
+  max-width: 20rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.employerDashIllu {
+  display: flex;
+  justify-content: center;
+}
+
+.employerDashIlluSvg {
+  display: block;
+}
+
+.employerDashInsightRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .employerDashInsightRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashInsight {
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.employerDashInsightIcon {
+  margin-bottom: 0.5rem;
+}
+
+.employerDashInsightTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerDashInsightText {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+/* —— Employer landing (/) —— */
+.employerLandingPage {
+  position: relative;
+  min-height: 100vh;
+  padding: 1.25rem 1rem 2.5rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 48%, #f1f5f9 100%);
+}
+
+.employerLandingAmbient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(520px 280px at 12% 0%, rgba(59, 130, 246, 0.12), transparent 70%),
+    radial-gradient(480px 260px at 88% 8%, rgba(99, 102, 241, 0.1), transparent 72%);
+  z-index: 0;
+}
+
+.employerLandingShell {
+  position: relative;
+  z-index: 1;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.employerLandingHeader {
+  margin-bottom: 1.75rem;
+}
+
+.employerLandingTopRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.employerLandingBrand {
+  margin: 0;
+}
+
+.employerLandingTitle {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.employerLandingTagline {
+  margin: 0 0 1.15rem;
+  font-size: 1rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.employerLandingToolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.employerLandingInvite {
+  margin-bottom: 1.5rem;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+}
+
+.employerLandingInviteTitle {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerLandingInviteLead {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.employerLandingInviteForm {
+  margin-bottom: 0.75rem;
+}
+
+.employerLandingInviteLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.employerLandingInviteRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.employerLandingInviteRow .authInput {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.employerLandingInviteSend {
+  flex-shrink: 0;
+}
+
+.employerLandingInviteFlash {
+  margin: 0.55rem 0 0;
+  font-size: 0.86rem;
+}
+
+.employerLandingInviteListHint {
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+}
+
+.employerLandingInviteListTitle {
+  margin: 0.75rem 0 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+}
+
+.employerLandingInviteItems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.employerLandingInviteItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.employerLandingInviteItemEmail {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+.employerLandingInviteLink {
+  font-size: 0.72rem;
+  word-break: break-all;
+  color: #4338ca;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(199, 210, 254, 0.85);
+}
+
+@media (min-width: 640px) {
+  .employerLandingToolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+  }
+}
+
+.employerLandingLogout {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.employerLandingLogout:hover {
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.employerLandingLogout:active {
+  transform: scale(0.98);
+}
+
+.employerLandingLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.employerLandingNavLink {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #4338ca;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.employerLandingNavLink:hover {
+  color: #1d4ed8;
+}
+
+.employerLandingIntro {
+  margin-bottom: 1.75rem;
+  padding: 1.15rem 1.2rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.employerLandingIntroTitle {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.employerLandingIntroText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.employerLandingGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.employerLandingCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.employerLandingCard:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 12px 32px rgba(67, 56, 202, 0.12);
+  transform: translateY(-2px);
+}
+
+.employerLandingCardSoon {
+  border-style: dashed;
+  border-color: rgba(99, 102, 241, 0.35);
+  background: linear-gradient(160deg, rgba(238, 242, 255, 0.65) 0%, #fff 55%);
+}
+
+.employerLandingSoonBadge {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #4338ca;
+  background: rgba(224, 231, 255, 0.95);
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+}
+
+.employerLandingCardIcon {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.employerLandingCardTitle {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.employerLandingCardText {
+  margin: 0 0 0.75rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #64748b;
+  flex: 1;
+}
+
+.employerLandingCardCta {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.employerLandingCard:hover .employerLandingCardCta {
+  color: #1d4ed8;
+}
+
+.employerApplicationsPlaceholder {
+  margin-top: 0.5rem;
+  padding: 1.35rem 1.25rem;
+  border-radius: 16px;
+}
+
+.employerApplicationsPlaceholderTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerApplicationsPlaceholderText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.employerApplicationsInlineLogout {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #4f46e5;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.employerApplicationsInlineLogout:hover {
+  color: #1d4ed8;
+}
+

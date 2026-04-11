@@ -170,3 +170,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 FEATURE_FLAGS = {
     "enable_text_similarity": os.environ.get("FF_ENABLE_TEXT_SIMILARITY", "false").lower() == "true",
 }
+
+# ESCO (EU Commission) skill search — enriches /api/candidates/skills/suggest/ when the DB is sparse.
+ESCO_SKILLS_ENABLED = os.environ.get("ESCO_SKILLS_ENABLED", "true").lower() in ("1", "true", "yes")
+ESCO_SKILLS_TIMEOUT_SEC = float(os.environ.get("ESCO_SKILLS_TIMEOUT_SEC", "3"))
+ESCO_SKILLS_FETCH_LIMIT = int(os.environ.get("ESCO_SKILLS_FETCH_LIMIT", "15"))

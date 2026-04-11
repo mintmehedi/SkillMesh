@@ -17,7 +17,7 @@ class MatchingServiceTests(TestCase):
         employer_user = User.objects.create_user(
             email="emp@example.com", username="emp", password="pass12345", role="employer"
         )
-        candidate = CandidateProfile.objects.create(user=candidate_user, full_name="Cand", years_experience=3)
+        candidate = CandidateProfile.objects.create(user=candidate_user, full_name="Cand")
         CandidateSkill.objects.create(candidate=candidate, skill_name="python", level=3)
 
         job = JobPosting.objects.create(
