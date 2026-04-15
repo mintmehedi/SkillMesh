@@ -1,7 +1,6 @@
-# SkillMesh - Intelligent Talent Matching Platform
+# SkillMesh 
 
 ## About
-SkillMesh is a full-stack web application (Indeed/Seek style) with role-based candidate and employer workflows.
 
 This web app is part of the University of Wollongong CSIT314 Autumn class project.
 
