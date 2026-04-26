@@ -55,3 +55,6 @@ dist/
 
 # Deploy / misc
 .vercel
+
+# Cursor
+.cursor
