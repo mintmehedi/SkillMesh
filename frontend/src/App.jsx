@@ -265,7 +265,10 @@ function focusFirstRegisterFieldError(fieldErrors, role) {
   for (const [key, id] of order) {
     if (fieldErrors[key] && tryFocus(id)) return;
   }
-  if (fieldErrors.suburb || fieldErrors.postcode) tryFocus("reg-cand-location");
+  if (fieldErrors.suburb || fieldErrors.postcode) {
+    if (tryFocus("reg-cand-suburb") || tryFocus("reg-cand-postcode")) return;
+    tryFocus("reg-cand-location");
+  }
 }
 
 function RegisterPage() {
@@ -368,6 +371,17 @@ function RegisterPage() {
   const usernameValidFormat = /^[A-Za-z0-9_]{3,20}$/.test(form.username.trim());
   const confirmMatches = form.password_confirm.length > 0 && form.password === form.password_confirm;
   const dobValid = Boolean(form.date_of_birth);
+  const locationQuery = (form.location_query || "").trim();
+  const locationPostcodeMatch = locationQuery.match(/\b(\d{4})\b/);
+  const parsedLocationPostcode = locationPostcodeMatch ? locationPostcodeMatch[1] : "";
+  const parsedLocationSuburb = locationQuery
+    .replace(/\b\d{4}\b/g, "")
+    .replace(/[-,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const effectiveSuburb = (form.suburb || "").trim() || parsedLocationSuburb;
+  const effectiveSuburbForSubmit = effectiveSuburb || locationQuery;
+  const effectivePostcode = (form.postcode || "").trim() || parsedLocationPostcode;
 
   useEffect(() => {
     if (form.role !== "candidate") {
@@ -481,8 +495,8 @@ function RegisterPage() {
     form.first_name.trim() &&
     form.last_name.trim() &&
     form.country.trim() &&
-    form.suburb.trim() &&
-    form.postcode.trim() &&
+    effectiveSuburbForSubmit &&
+    effectivePostcode &&
     form.mobile_number.trim();
 
   const employerFormValid =
@@ -500,7 +514,14 @@ function RegisterPage() {
         setError("");
         setFieldErrors({});
         try {
-          await register(form);
+          const payload = form.role === "candidate"
+            ? {
+              ...form,
+              suburb: effectiveSuburbForSubmit,
+              postcode: effectivePostcode,
+            }
+            : form;
+          await register(payload);
           if (form.role === "candidate") {
             navigate("/onboarding/work-experience");
           } else if (form.employer_invite_token) {

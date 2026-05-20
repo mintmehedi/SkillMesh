@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .geo_meta import STATES_BY_COUNTRY
+from .geo_meta import AU_SUBURB_POSTCODES, COUNTRIES, STATES_BY_COUNTRY
 from .serializers import (
     CandidateRegisterSerializer,
     EmailTokenObtainPairSerializer,
@@ -70,6 +70,11 @@ class CountryAutocompleteView(views.APIView):
         q = (request.query_params.get("q") or "").strip().lower()
         if not q:
             return Response([])
+        local_matches = [
+            row
+            for row in COUNTRIES
+            if q in row["name"].lower() or q in row["code"].lower()
+        ]
         try:
             rows = _http_json(
                 f"https://restcountries.com/v3.1/name/{quote(q)}?fields=name,cca2&limit=20"
@@ -86,9 +91,12 @@ class CountryAutocompleteView(views.APIView):
                     continue
                 seen.add(key)
                 normalized.append({"name": name, "code": code})
-            return Response(sorted(normalized, key=lambda x: x["name"])[:20])
+            merged = {row["code"]: row for row in local_matches}
+            for row in normalized:
+                merged[row["code"]] = row
+            return Response(sorted(merged.values(), key=lambda x: x["name"])[:20])
         except Exception:
-            return Response([])
+            return Response(sorted(local_matches, key=lambda x: x["name"])[:20])
 
 
 class StateRegionAutocompleteView(views.APIView):
@@ -227,6 +235,20 @@ class AuPostcodeAutocompleteView(views.APIView):
         country_code = (request.query_params.get("country_code") or "").strip().lower()
         if not q:
             return Response([])
+        local_matches = []
+        for row in AU_SUBURB_POSTCODES:
+            if country_code and country_code != row["country_code"].lower():
+                continue
+            haystack = " ".join(
+                [
+                    row["suburb"].lower(),
+                    row["postcode"].lower(),
+                    row["state"].lower(),
+                    row["country_code"].lower(),
+                ]
+            )
+            if q in haystack:
+                local_matches.append(row)
         try:
             country_part = f"&countrycodes={quote(country_code)}" if country_code else ""
             rows = _http_json(
@@ -258,7 +280,8 @@ class AuPostcodeAutocompleteView(views.APIView):
                 )
             unique = []
             seen = set()
-            for r in normalized:
+            merged = local_matches + normalized
+            for r in merged:
                 key = (r["postcode"], r["suburb"], r["state"], r["country_code"])
                 if key in seen:
                     continue
@@ -266,7 +289,7 @@ class AuPostcodeAutocompleteView(views.APIView):
                 unique.append(r)
             return Response(unique[:20])
         except Exception:
-            return Response([])
+            return Response(local_matches[:20])
 
 
 class UsernameAvailabilityView(views.APIView):
