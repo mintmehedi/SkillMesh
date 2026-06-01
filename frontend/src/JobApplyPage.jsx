@@ -32,21 +32,12 @@ export function JobApplyPage() {
   const [dragCover, setDragCover] = useState(false);
   const [resumePreview, setResumePreview] = useState(null);
   const [resumePreviewLoading, setResumePreviewLoading] = useState(false);
-  const [coverBlobUrl, setCoverBlobUrl] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
   const resumePreviewUrlRef = useRef(null);
+  const coverPreviewUrlRef = useRef(null);
 
   const showCandidateHeader =
     user?.role === "candidate" && user?.candidate_onboarding?.onboarding_step === "done";
-
-  useEffect(() => {
-    if (!coverFile) {
-      setCoverBlobUrl(null);
-      return undefined;
-    }
-    const u = URL.createObjectURL(coverFile);
-    setCoverBlobUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [coverFile]);
 
   function classifyResumeBlob(blob, filenameHint) {
     const mime = (blob.type || "").toLowerCase();
@@ -69,6 +60,28 @@ export function JobApplyPage() {
       return null;
     });
   }, []);
+
+  const closeCoverPreview = useCallback(() => {
+    setCoverPreview((prev) => {
+      if (prev?.blobUrl) URL.revokeObjectURL(prev.blobUrl);
+      return null;
+    });
+  }, []);
+
+  const openCoverPreview = useCallback(() => {
+    if (!coverFile) return;
+    const lower = (coverFile.name || "").toLowerCase();
+    if (!lower.endsWith(".pdf")) {
+      setFormError("Only PDF cover letters can be previewed in the browser.");
+      return;
+    }
+    setFormError("");
+    const blobUrl = URL.createObjectURL(coverFile);
+    setCoverPreview((prev) => {
+      if (prev?.blobUrl) URL.revokeObjectURL(prev.blobUrl);
+      return { blobUrl, name: coverFile.name, isPdf: true };
+    });
+  }, [coverFile]);
 
   const openResumePreviewForId = useCallback(async (resumeId, nameHint, filenameHint) => {
     if (!resumeId) return;
@@ -95,10 +108,18 @@ export function JobApplyPage() {
   }, [resumePreview?.blobUrl]);
 
   useEffect(() => {
+    coverPreviewUrlRef.current = coverPreview?.blobUrl ?? null;
+  }, [coverPreview?.blobUrl]);
+
+  useEffect(() => {
     return () => {
       if (resumePreviewUrlRef.current) {
         URL.revokeObjectURL(resumePreviewUrlRef.current);
         resumePreviewUrlRef.current = null;
+      }
+      if (coverPreviewUrlRef.current) {
+        URL.revokeObjectURL(coverPreviewUrlRef.current);
+        coverPreviewUrlRef.current = null;
       }
     };
   }, []);
@@ -196,6 +217,14 @@ export function JobApplyPage() {
     }
     setFormError("");
     setCoverFile(file);
+    closeCoverPreview();
+    if ((file.name || "").toLowerCase().endsWith(".pdf")) {
+      const blobUrl = URL.createObjectURL(file);
+      setCoverPreview((prev) => {
+        if (prev?.blobUrl) URL.revokeObjectURL(prev.blobUrl);
+        return { blobUrl, name: file.name, isPdf: true };
+      });
+    }
   }
 
   async function handleSubmit(e) {
@@ -410,6 +439,7 @@ export function JobApplyPage() {
                       onChange={() => {
                         setCoverMode(COVER_NONE);
                         setCoverFile(null);
+                        closeCoverPreview();
                       }}
                     />
                     <span className="jobApplyModeTitle">Apply without cover letter</span>
@@ -484,21 +514,29 @@ export function JobApplyPage() {
                       <div className="jobApplyCoverPicked">
                         <p className="jobApplyFilePicked">
                           Selected: <strong>{coverFile.name}</strong>{" "}
-                          <button type="button" className="jobApplyCoverClear" onClick={() => setCoverFile(null)}>
+                          <button
+                            type="button"
+                            className="jobApplyCoverClear"
+                            onClick={() => {
+                              setCoverFile(null);
+                              closeCoverPreview();
+                            }}
+                          >
                             Remove
                           </button>
                         </p>
-                        {(coverFile.name || "").toLowerCase().endsWith(".pdf") && coverBlobUrl ? (
-                          <div className="jobApplyCoverPreview">
-                            <p className="jobApplyCoverPreviewLabel muted">Preview</p>
-                            <iframe title="Cover letter preview" src={coverBlobUrl} className="jobApplyCoverPreviewFrame" />
-                          </div>
-                        ) : (
-                          <p className="muted jobApplyCoverNoPreview">
-                            Word documents can’t be previewed in the browser here. Employers still receive your file when
-                            you submit.
-                          </p>
-                        )}
+                        <div className="jobApplyResumePreviewBar">
+                          {(coverFile.name || "").toLowerCase().endsWith(".pdf") ? (
+                            <button type="button" className="jobApplyBtnSecondary jobApplyPreviewBtn" onClick={openCoverPreview}>
+                              Preview cover letter
+                            </button>
+                          ) : (
+                            <p className="muted jobApplyCoverNoPreview">
+                              Word documents can’t be previewed in the browser. Employers still receive your file when you
+                              submit.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -542,6 +580,24 @@ export function JobApplyPage() {
               ) : (
                 <iframe src={resumePreview.blobUrl} title="Resume preview" />
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {coverPreview ? (
+        <div className="resumeOverlay" onClick={closeCoverPreview} role="presentation">
+          <div className="resumePreviewModal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="apply-cover-preview-title">
+            <div className="resumePreviewToolbar">
+              <span className="resumePreviewName" id="apply-cover-preview-title">
+                {coverPreview.name}
+              </span>
+              <button type="button" className="resumePreviewClose" onClick={closeCoverPreview}>
+                Close
+              </button>
+            </div>
+            <div className="resumePreviewBody">
+              <iframe src={coverPreview.blobUrl} title="Cover letter preview" />
             </div>
           </div>
         </div>

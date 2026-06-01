@@ -441,7 +441,7 @@ export function EmployerJobsPage() {
       const { fieldErrors: fe, generalMessage } = parseApiValidationErrors(err);
       const hasFields = Object.keys(fe).length > 0;
       setFieldErrors(fe);
-      setError(hasFields ? generalMessage : generalMessage || formatApiError(err));
+      setError(hasFields ? "" : generalMessage || formatApiError(err));
       if (hasFields) setTimeout(() => focusFirstJobFieldError(fe), 0);
     } finally {
       setSaving(false);

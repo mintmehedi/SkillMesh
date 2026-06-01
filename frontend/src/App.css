@@ -1427,14 +1427,22 @@ select.authSelect.authInputHasError {
 .rulePending,
 .ruleOk {
   font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .rulePending {
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .ruleOk {
-  color: #166534;
+  color: #047857;
+  font-weight: 600;
+}
+
+.ruleOk::before {
+  content: "✓ ";
+  color: #10b981;
+  font-weight: 700;
 }
 
 .dobPicker {
@@ -1447,18 +1455,18 @@ select.authSelect.authInputHasError {
 }
 
 .muiDobInput .MuiOutlinedInput-root {
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  background: #fff;
   min-height: 46px;
   font-size: 0.96rem;
 }
 
 .muiDobInput .MuiOutlinedInput-notchedOutline {
-  border-color: #cbd5e1;
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
 .muiDobInput .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-  border-color: #cbd5e1;
+  border-color: rgba(15, 23, 42, 0.18);
 }
 
 .muiDobInput .MuiInputLabel-root {
@@ -1471,7 +1479,9 @@ select.authSelect.authInputHasError {
 }
 
 .muiDobInput .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #6366f1;
+  border-color: rgba(15, 23, 42, 0.22);
+  border-width: 1px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
 .muiDobInput .MuiOutlinedInput-input {
@@ -1624,6 +1634,30 @@ select.authSelect.authInputHasError {
   margin-bottom: 0.5rem;
 }
 
+.onboardField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.onboardField + .onboardField,
+.onboardField + .onboardGrid,
+.onboardGrid + .onboardField {
+  margin-top: 0;
+}
+
+.onboardField textarea.authInput {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.35rem;
+}
+
+.onboardResumeError,
+.onboardSaveError {
+  margin: 0.35rem 0 0.65rem;
+}
+
 .onboardActions {
   display: flex;
   justify-content: space-between;
@@ -1677,12 +1711,30 @@ select.authSelect.authInputHasError {
   margin-right: -0.35rem;
 }
 
+.categoryGridHint {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+}
+
 .categoryPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   background: rgba(255, 255, 255, 0.9);
   color: #1e293b;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 999px;
-  padding: 0.45rem 0.8rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.categoryPillCheck {
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 800;
 }
 
 .categoryPillActive {
@@ -3381,15 +3433,15 @@ a.jobsSeekCta {
   margin-top: 0.15rem;
 }
 
-/* max-height animates reliably; grid 0fr→1fr stays at 0 with auto-height parents */
 .jobsSeekMoreShell {
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
-  transition: max-height 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: grid-template-rows 0.2s ease;
 }
 
 .jobsSeekMoreShellOpen {
-  max-height: min(720px, 85vh);
+  grid-template-rows: 1fr;
   overflow: visible;
   margin-bottom: 0.35rem;
 }
@@ -3638,6 +3690,137 @@ a.jobsSeekCta {
   border-color: rgba(15, 23, 42, 0.12);
 }
 
+.jobsSeekSavedPanel {
+  flex: 1;
+  padding: 1.5rem clamp(1rem, 3vw, 2rem) 2.5rem;
+  background: #fafafa;
+}
+
+.jobsSeekSavedPanelInner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.jobsSeekSavedPanelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.jobsSeekSavedPanelTitle {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.jobsSeekSavedPanelLead {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.jobsSeekSavedEmpty {
+  padding: 2rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.jobsSeekSavedEmptyCta {
+  display: inline-block;
+  margin-top: 1rem;
+  text-decoration: none;
+}
+
+.jobsSeekSavedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.jobsSeekSavedCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+}
+
+.jobsSeekSavedCardTitle {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.jobsSeekSavedCardMeta {
+  margin: 0 0 0.35rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.86rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.jobsSeekSavedCardMeta li + li {
+  margin-top: 0.15rem;
+}
+
+.jobsSeekSavedCardDate {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.jobsSeekSavedCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jobsSeekSavedRunBtn {
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+}
+
+.candidateDashAccountDanger {
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.candidateDashDeleteAccountBtn {
+  margin-top: 0.35rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fff;
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.candidateDashDeleteAccountBtn:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #b91c1c;
+}
+
+.candidateDashDeleteAccountBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .jobsSeekFlash {
   max-width: 1120px;
   margin: 0.5rem auto 0;
@@ -3647,14 +3830,15 @@ a.jobsSeekCta {
 .jobsSeekBody {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   gap: 1.5rem;
-  max-width: 1120px;
+  max-width: min(1120px, 100%);
   margin: 0 auto;
   padding: 1.5rem clamp(1rem, 3vw, 2rem) 2.5rem;
   width: 100%;
   box-sizing: border-box;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 @media (max-width: 960px) {
@@ -3665,6 +3849,9 @@ a.jobsSeekCta {
 
 .jobsSeekMain {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: min(72vh, calc(100vh - 18rem));
 }
 
 .jobsSeekTabs {
@@ -3737,6 +3924,7 @@ a.jobsSeekCta {
   justify-content: space-between;
   gap: 0.5rem 1rem;
   margin-bottom: 0.15rem;
+  flex-shrink: 0;
 }
 
 .jobsSeekListHeaderRow .jobsSeekListMeta {
@@ -3755,6 +3943,11 @@ a.jobsSeekCta {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: min(72vh, calc(100vh - 16rem));
+  padding-right: 0.15rem;
 }
 
 .jobsSeekEmpty {
@@ -3906,20 +4099,27 @@ a.jobsSeekCta {
 
 .jobsSeekCardActions {
   display: flex;
+  align-items: center;
   gap: 0.2rem;
 }
 
 .jobsSeekIconBtn {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border: none;
   border-radius: 10px;
   background: transparent;
   color: #64748b;
   cursor: pointer;
+  flex-shrink: 0;
   transition: background 0.12s ease, color 0.12s ease;
+}
+
+.jobsSeekIconSvg {
+  display: block;
 }
 
 .jobsSeekIconBtn:hover {
@@ -3990,6 +4190,10 @@ a.jobsSeekCta {
   gap: 0.75rem;
   position: sticky;
   top: 0.75rem;
+  align-self: stretch;
+  min-height: min(72vh, calc(100vh - 18rem));
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
 }
 
 @media (max-width: 960px) {
@@ -4486,6 +4690,61 @@ a.jobsSeekCta {
 .candidateAppliedJobsStatus--accepted {
   background: #d1fae5;
   color: #047857;
+}
+
+.candidateAppliedJobsStatus--withdrawn {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.candidateAppliedJobsClosedBar {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  font-size: 0.86rem;
+  color: #9a3412;
+  line-height: 1.45;
+}
+
+.candidateAppliedJobsClosedBar strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.candidateAppliedJobsClosedBar p {
+  margin: 0;
+}
+
+.candidateAppliedJobsWithdrawBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: #b91c1c;
+}
+
+.candidateAppliedJobsWithdrawBtn:hover:not(:disabled) {
+  color: #991b1b;
+  text-decoration: underline;
+}
+
+.candidateAppliedJobsWithdrawBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.jobDetailAppliedClosedBar {
+  margin-bottom: 1rem;
+}
+
+.jobDetailAppliedClosedBar .jobsSeekLinkBtn {
+  display: inline-block;
+  margin-top: 0.45rem;
 }
 
 .candidateAppliedJobsCompany {

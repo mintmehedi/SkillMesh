@@ -29,6 +29,7 @@ import {
   parseApiValidationErrors,
   parseIndexedListFieldErrors,
 } from "./apiErrors";
+import { onboardListFieldErr } from "./onboardingFieldErrors";
 import { LS_SAVED_JOBS, loadSavedJobIds, persistSavedJobIds } from "./savedJobs";
 
 const EMPLOYER_COMPANY_SIZE_OPTIONS = [
@@ -1066,7 +1067,7 @@ function CandidateOnboardingRoute({ page, children }) {
   return children;
 }
 
-function CandidateOnboardingWorkExperience() {
+export function CandidateOnboardingWorkExperience() {
   const navigate = useNavigate();
   const { refreshMe } = useAuth();
   const [resumeFile, setResumeFile] = useState(null);
@@ -1077,7 +1078,8 @@ function CandidateOnboardingWorkExperience() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [workRowErrors, setWorkRowErrors] = useState({});
   const [eduRowErrors, setEduRowErrors] = useState({});
   const [workRows, setWorkRows] = useState([
@@ -1145,7 +1147,7 @@ function CandidateOnboardingWorkExperience() {
     setResumeFile(file || null);
     setResumeSynced(false);
     setStatus("");
-    setError("");
+    setResumeError("");
     if (resumePreviewUrl) URL.revokeObjectURL(resumePreviewUrl);
     const fileName = (file?.name || "").toLowerCase();
     const isPreviewable =
@@ -1222,7 +1224,7 @@ function CandidateOnboardingWorkExperience() {
         }),
       }).catch(() => {});
       // #endregion
-      setError("Please upload a resume first.");
+      setResumeError("Please upload a resume first.");
       return;
     }
     // #region agent log
@@ -1242,7 +1244,7 @@ function CandidateOnboardingWorkExperience() {
     }).catch(() => {});
     // #endregion
     setUploading(true);
-    setError("");
+    setResumeError("");
     setStatus("");
     try {
       const fd = new FormData();
@@ -1329,7 +1331,7 @@ function CandidateOnboardingWorkExperience() {
         }),
       }).catch(() => {});
       // #endregion
-      setError(String(err.message || err));
+      setResumeError(String(err.message || err));
     } finally {
       setUploading(false);
     }
@@ -1337,7 +1339,8 @@ function CandidateOnboardingWorkExperience() {
 
   async function saveAndContinue() {
     setSaving(true);
-    setError("");
+    setSaveError("");
+    setResumeError("");
     setStatus("");
     setWorkRowErrors({});
     setEduRowErrors({});
@@ -1390,7 +1393,7 @@ function CandidateOnboardingWorkExperience() {
       try {
         data = JSON.parse(raw);
       } catch {
-        setError(raw || "Something went wrong.");
+        setSaveError(raw || "Something went wrong.");
         return;
       }
       const rawWorkErr = parseIndexedListFieldErrors(data.work_experiences);
@@ -1421,9 +1424,9 @@ function CandidateOnboardingWorkExperience() {
       delete filtered.education_entries;
       const { generalMessage } = parseApiValidationErrors({ message: JSON.stringify(filtered) });
       const hasRowErr = Object.keys(wErr).length > 0 || Object.keys(eErr).length > 0;
-      setError(
-        generalMessage || (hasRowErr ? "Fix the highlighted fields below." : raw || "Something went wrong."),
-      );
+      if (!hasRowErr) {
+        setSaveError(generalMessage || raw || "Something went wrong.");
+      }
       if (hasRowErr) {
         requestAnimationFrame(() => {
           const el = document.querySelector(".experienceCard .authInputHasError, .experienceCard .Mui-error");
@@ -1436,7 +1439,8 @@ function CandidateOnboardingWorkExperience() {
   }
 
   async function skipStep() {
-    setError("");
+    setSaveError("");
+    setResumeError("");
     setStatus("");
     try {
       await api("/api/candidates/onboarding/advance", {
@@ -1446,17 +1450,8 @@ function CandidateOnboardingWorkExperience() {
       await refreshMe();
       navigate("/onboarding/categories");
     } catch (err) {
-      setError(String(err.message || err));
+      setSaveError(String(err.message || err));
     }
-  }
-
-  function listRowFieldErr(rowMap, index, field) {
-    const row = rowMap[index];
-    if (!row) return "";
-    return row[field] || "";
-  }
-  function listRowGeneralErr(rowMap, index) {
-    return rowMap[index]?._row || "";
   }
 
   return (
@@ -1470,11 +1465,10 @@ function CandidateOnboardingWorkExperience() {
       <h2>Resume, education &amp; work experience</h2>
       <p className="muted">Upload a resume (PDF/JPG/PNG/DOCX) and add study and roles. We can auto-fill both from your file.</p>
       {status && <p className="success">{status}</p>}
-      {error && <p className="error">{error}</p>}
 
       <div className="onboardResumeRow">
         <input
-          className="authInput"
+          className={resumeError ? "authInput authInputHasError" : "authInput"}
           type="file"
           accept=".pdf,.jpg,.jpeg,.png,.docx"
           onChange={(e) => onResumeSelected(e.target.files?.[0] || null)}
@@ -1483,6 +1477,7 @@ function CandidateOnboardingWorkExperience() {
           {uploading ? "Parsing resume..." : "Auto-fill from resume"}
         </button>
       </div>
+      {resumeError ? <p className="fieldErrorHint onboardResumeError" role="alert">{resumeError}</p> : null}
 
       {resumeFile && (
         <div className="resumePreviewMini">
@@ -1499,45 +1494,70 @@ function CandidateOnboardingWorkExperience() {
       <h4 className="registerSectionTitle">Education</h4>
       {educationRows.map((row, index) => (
         <div className="experienceCard" key={`edu-${index}`}>
-          {listRowGeneralErr(eduRowErrors, index) ? (
-            <p className="fieldErrorHint" role="alert">
-              {listRowGeneralErr(eduRowErrors, index)}
-            </p>
-          ) : null}
           <div className="onboardGrid">
-            <input
-              className={listRowFieldErr(eduRowErrors, index, "institution") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Institution"
-              value={row.institution || ""}
-              onChange={(e) => updateEduRow(index, { institution: e.target.value })}
-            />
-            <input
-              className={listRowFieldErr(eduRowErrors, index, "degree") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Degree (e.g. Bachelor of Science)"
-              value={row.degree || ""}
-              onChange={(e) => updateEduRow(index, { degree: e.target.value })}
-            />
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(eduRowErrors, index, "institution") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Institution"
+                value={row.institution || ""}
+                aria-invalid={!!onboardListFieldErr(eduRowErrors, index, "institution")}
+                onChange={(e) => updateEduRow(index, { institution: e.target.value })}
+              />
+              {onboardListFieldErr(eduRowErrors, index, "institution") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(eduRowErrors, index, "institution")}</p>
+              ) : null}
+            </div>
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(eduRowErrors, index, "degree") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Degree (e.g. Bachelor of Science)"
+                value={row.degree || ""}
+                aria-invalid={!!onboardListFieldErr(eduRowErrors, index, "degree")}
+                onChange={(e) => updateEduRow(index, { degree: e.target.value })}
+              />
+              {onboardListFieldErr(eduRowErrors, index, "degree") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(eduRowErrors, index, "degree")}</p>
+              ) : null}
+            </div>
           </div>
           <div className="onboardGrid">
-            <input
-              className={listRowFieldErr(eduRowErrors, index, "field_of_study") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Field of study"
-              value={row.field_of_study || ""}
-              onChange={(e) => updateEduRow(index, { field_of_study: e.target.value })}
-            />
-            <input
-              className={listRowFieldErr(eduRowErrors, index, "major") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Major"
-              value={row.major || ""}
-              onChange={(e) => updateEduRow(index, { major: e.target.value })}
-            />
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(eduRowErrors, index, "field_of_study") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Field of study"
+                value={row.field_of_study || ""}
+                aria-invalid={!!onboardListFieldErr(eduRowErrors, index, "field_of_study")}
+                onChange={(e) => updateEduRow(index, { field_of_study: e.target.value })}
+              />
+              {onboardListFieldErr(eduRowErrors, index, "field_of_study") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(eduRowErrors, index, "field_of_study")}</p>
+              ) : null}
+            </div>
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(eduRowErrors, index, "major") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Major"
+                value={row.major || ""}
+                aria-invalid={!!onboardListFieldErr(eduRowErrors, index, "major")}
+                onChange={(e) => updateEduRow(index, { major: e.target.value })}
+              />
+              {onboardListFieldErr(eduRowErrors, index, "major") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(eduRowErrors, index, "major")}</p>
+              ) : null}
+            </div>
           </div>
-          <textarea
-            className={listRowFieldErr(eduRowErrors, index, "description") ? "authInput authInputHasError" : "authInput"}
-            placeholder="Honours, coursework, or other details"
-            value={row.description || ""}
-            onChange={(e) => updateEduRow(index, { description: e.target.value })}
-          />
+          <div className="onboardField">
+            <textarea
+              className={onboardListFieldErr(eduRowErrors, index, "description") ? "authInput authInputHasError" : "authInput"}
+              placeholder="Honours, coursework, or other details"
+              value={row.description || ""}
+              aria-invalid={!!onboardListFieldErr(eduRowErrors, index, "description")}
+              onChange={(e) => updateEduRow(index, { description: e.target.value })}
+            />
+            {onboardListFieldErr(eduRowErrors, index, "description") ? (
+              <p className="fieldErrorHint" role="alert">{onboardListFieldErr(eduRowErrors, index, "description")}</p>
+            ) : null}
+          </div>
           <div className="onboardGrid">
             <SiteDatePicker
               label="Start"
@@ -1545,8 +1565,8 @@ function CandidateOnboardingWorkExperience() {
               onChange={(v) => updateEduRow(index, { start_date: v })}
               slotProps={{
                 textField: {
-                  error: !!listRowFieldErr(eduRowErrors, index, "start_date"),
-                  helperText: listRowFieldErr(eduRowErrors, index, "start_date") || undefined,
+                  error: !!onboardListFieldErr(eduRowErrors, index, "start_date"),
+                  helperText: onboardListFieldErr(eduRowErrors, index, "start_date") || undefined,
                 },
               }}
             />
@@ -1557,8 +1577,8 @@ function CandidateOnboardingWorkExperience() {
                 onChange={(v) => updateEduRow(index, { end_date: v })}
                 slotProps={{
                   textField: {
-                    error: !!listRowFieldErr(eduRowErrors, index, "end_date"),
-                    helperText: listRowFieldErr(eduRowErrors, index, "end_date") || undefined,
+                    error: !!onboardListFieldErr(eduRowErrors, index, "end_date"),
+                    helperText: onboardListFieldErr(eduRowErrors, index, "end_date") || undefined,
                   },
                 }}
               />
@@ -1586,31 +1606,44 @@ function CandidateOnboardingWorkExperience() {
       <h4 className="registerSectionTitle">Work experiences</h4>
       {workRows.map((row, index) => (
         <div className="experienceCard" key={`exp-${index}`}>
-          {listRowGeneralErr(workRowErrors, index) ? (
-            <p className="fieldErrorHint" role="alert">
-              {listRowGeneralErr(workRowErrors, index)}
-            </p>
-          ) : null}
           <div className="onboardGrid">
-            <input
-              className={listRowFieldErr(workRowErrors, index, "job_title") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Job role"
-              value={row.job_title || ""}
-              onChange={(e) => updateRow(index, { job_title: e.target.value })}
-            />
-            <input
-              className={listRowFieldErr(workRowErrors, index, "company_name") ? "authInput authInputHasError" : "authInput"}
-              placeholder="Company name"
-              value={row.company_name || ""}
-              onChange={(e) => updateRow(index, { company_name: e.target.value })}
-            />
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(workRowErrors, index, "job_title") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Job role"
+                value={row.job_title || ""}
+                aria-invalid={!!onboardListFieldErr(workRowErrors, index, "job_title")}
+                onChange={(e) => updateRow(index, { job_title: e.target.value })}
+              />
+              {onboardListFieldErr(workRowErrors, index, "job_title") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(workRowErrors, index, "job_title")}</p>
+              ) : null}
+            </div>
+            <div className="onboardField">
+              <input
+                className={onboardListFieldErr(workRowErrors, index, "company_name") ? "authInput authInputHasError" : "authInput"}
+                placeholder="Company name"
+                value={row.company_name || ""}
+                aria-invalid={!!onboardListFieldErr(workRowErrors, index, "company_name")}
+                onChange={(e) => updateRow(index, { company_name: e.target.value })}
+              />
+              {onboardListFieldErr(workRowErrors, index, "company_name") ? (
+                <p className="fieldErrorHint" role="alert">{onboardListFieldErr(workRowErrors, index, "company_name")}</p>
+              ) : null}
+            </div>
           </div>
-          <textarea
-            className={listRowFieldErr(workRowErrors, index, "description") ? "authInput authInputHasError" : "authInput"}
-            placeholder="Job description"
-            value={row.description || ""}
-            onChange={(e) => updateRow(index, { description: e.target.value })}
-          />
+          <div className="onboardField">
+            <textarea
+              className={onboardListFieldErr(workRowErrors, index, "description") ? "authInput authInputHasError" : "authInput"}
+              placeholder="Job description"
+              value={row.description || ""}
+              aria-invalid={!!onboardListFieldErr(workRowErrors, index, "description")}
+              onChange={(e) => updateRow(index, { description: e.target.value })}
+            />
+            {onboardListFieldErr(workRowErrors, index, "description") ? (
+              <p className="fieldErrorHint" role="alert">{onboardListFieldErr(workRowErrors, index, "description")}</p>
+            ) : null}
+          </div>
           <div className="onboardGrid">
             <SiteDatePicker
               label="Start date"
@@ -1618,8 +1651,8 @@ function CandidateOnboardingWorkExperience() {
               onChange={(v) => updateRow(index, { start_date: v })}
               slotProps={{
                 textField: {
-                  error: !!listRowFieldErr(workRowErrors, index, "start_date"),
-                  helperText: listRowFieldErr(workRowErrors, index, "start_date") || undefined,
+                  error: !!onboardListFieldErr(workRowErrors, index, "start_date"),
+                  helperText: onboardListFieldErr(workRowErrors, index, "start_date") || undefined,
                 },
               }}
             />
@@ -1630,8 +1663,8 @@ function CandidateOnboardingWorkExperience() {
                 onChange={(v) => updateRow(index, { end_date: v })}
                 slotProps={{
                   textField: {
-                    error: !!listRowFieldErr(workRowErrors, index, "end_date"),
-                    helperText: listRowFieldErr(workRowErrors, index, "end_date") || undefined,
+                    error: !!onboardListFieldErr(workRowErrors, index, "end_date"),
+                    helperText: onboardListFieldErr(workRowErrors, index, "end_date") || undefined,
                   },
                 }}
               />
@@ -1655,6 +1688,7 @@ function CandidateOnboardingWorkExperience() {
         </div>
       ))}
       <button type="button" className="addExpBtn" onClick={addRow}>+ Add more work experience</button>
+      {saveError ? <p className="fieldErrorHint onboardSaveError" role="alert">{saveError}</p> : null}
       <button type="button" className="modernBtn authSubmitBtn" onClick={saveAndContinue} disabled={saving}>
         {saving ? "Saving..." : "Save and continue"}
       </button>
@@ -1761,21 +1795,33 @@ function CandidateCategoryOnboarding() {
           {fieldErrors.preferred_job_category_ids}
         </p>
       ) : null}
+      <p className="muted categoryGridHint">
+        {selected.length > 0
+          ? `${selected.length} selected — tap to add or remove.`
+          : "Pick at least one category that matches the roles you want."}
+      </p>
       <div
-        className={`categoryGrid${fieldErrors.preferred_job_category_ids ? " categoryGridHasError" : ""}`}
+        className={`categoryGrid candidateDashCategoryGrid${fieldErrors.preferred_job_category_ids ? " categoryGridHasError" : ""}`}
+        role="group"
+        aria-label="Preferred job categories"
         aria-invalid={!!fieldErrors.preferred_job_category_ids}
         aria-describedby={fieldErrors.preferred_job_category_ids ? "onb-categories-err" : undefined}
       >
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={`categoryPill ${selected.includes(c.id) ? "categoryPillActive" : ""}`}
-            onClick={() => toggleCategory(c.id)}
-          >
-            {c.name}
-          </button>
-        ))}
+        {categories.map((c) => {
+          const on = selected.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className={`categoryPill candidateDashCatPill ${on ? "categoryPillActive candidateDashCatPillOn" : ""}`}
+              aria-pressed={on}
+              onClick={() => toggleCategory(c.id)}
+            >
+              {on ? <span className="categoryPillCheck" aria-hidden="true">✓</span> : null}
+              {c.name}
+            </button>
+          );
+        })}
       </div>
       <button className="modernBtn authSubmitBtn" type="button" onClick={completeCategories} disabled={saving}>
         {saving ? "Saving..." : "Finish onboarding"}
@@ -1784,28 +1830,160 @@ function CandidateCategoryOnboarding() {
   );
 }
 
-const LS_RECENT_SEARCHES = "skillmesh_recent_searches";
+const LS_SAVED_SEARCHES = "skillmesh_saved_searches_v2";
+const LS_RECENT_SEARCHES_LEGACY = "skillmesh_recent_searches";
 
 function saveIdSet(key, set) {
   localStorage.setItem(key, JSON.stringify([...set]));
 }
 
-function loadRecentSearches() {
+function makeSavedSearchId() {
+  return `ss_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function loadSavedSearches() {
   try {
-    const raw = JSON.parse(localStorage.getItem(LS_RECENT_SEARCHES) || "[]");
-    return Array.isArray(raw) ? raw.filter((s) => typeof s === "string").slice(0, 10) : [];
+    const raw = JSON.parse(localStorage.getItem(LS_SAVED_SEARCHES) || "[]");
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw.filter((s) => s && typeof s === "object" && s.id).slice(0, 12);
+    }
+    const legacy = JSON.parse(localStorage.getItem(LS_RECENT_SEARCHES_LEGACY) || "[]");
+    if (!Array.isArray(legacy) || !legacy.length) return [];
+    const migrated = legacy
+      .filter((s) => typeof s === "string" && s.trim())
+      .slice(0, 8)
+      .map((q) => ({
+        id: makeSavedSearchId(),
+        label: q.trim(),
+        keyword: q.trim(),
+        location: "",
+        locationSearchTerms: [],
+        categoryFilter: "",
+        workModeFilter: "",
+        workTypeFilter: "",
+        salaryMinK: 0,
+        salaryMaxK: 350,
+        listedFilter: "",
+        savedAt: new Date().toISOString(),
+      }));
+    if (migrated.length) localStorage.setItem(LS_SAVED_SEARCHES, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return [];
   }
 }
 
-function pushRecentSearch(q) {
-  const t = q.trim();
-  if (!t) return loadRecentSearches();
-  const prev = loadRecentSearches().filter((x) => x.toLowerCase() !== t.toLowerCase());
-  const next = [t, ...prev].slice(0, 10);
-  localStorage.setItem(LS_RECENT_SEARCHES, JSON.stringify(next));
-  return next;
+function persistSavedSearches(list) {
+  localStorage.setItem(LS_SAVED_SEARCHES, JSON.stringify(list));
+  return list;
+}
+
+function buildSavedSearchSnapshot(filters) {
+  const keyword = (filters.keyword || "").trim();
+  const location = (filters.locationFilter || "").trim();
+  const locationSearchTerms = Array.isArray(filters.locationSearchTerms)
+    ? filters.locationSearchTerms.map((t) => String(t).toLowerCase())
+    : [];
+  const categoryFilter = filters.categoryFilter || "";
+  const workModeFilter = filters.workModeFilter || "";
+  const workTypeFilter = filters.workTypeFilter || "";
+  const salaryMinK = Number(filters.salaryMinK) || 0;
+  const salaryMaxK = Number(filters.salaryMaxK) ?? 350;
+  const listedFilter = filters.listedFilter || "";
+  const hasQuery =
+    keyword
+    || location
+    || locationSearchTerms.length
+    || categoryFilter
+    || workModeFilter
+    || workTypeFilter
+    || salaryMinK > 0
+    || salaryMaxK < 350
+    || listedFilter;
+  if (!hasQuery) return null;
+
+  const labelParts = [];
+  if (keyword) labelParts.push(keyword);
+  if (location) labelParts.push(location);
+  else if (locationSearchTerms.length) labelParts.push(locationSearchTerms.slice(0, 2).join(", "));
+  if (categoryFilter) labelParts.push("Category filter");
+  if (workModeFilter) labelParts.push(formatWorkModeLabel(workModeFilter));
+  if (workTypeFilter) {
+    const wt = { fulltime: "Full-time", parttime: "Part-time", casual: "Casual", contract: "Contract" }[workTypeFilter];
+    if (wt) labelParts.push(wt);
+  }
+  if (salaryMinK > 0 || salaryMaxK < 350) labelParts.push("Salary range");
+  if (listedFilter) {
+    const listed = { "1": "24h", "3": "3 days", "7": "7 days", "14": "14 days", "30": "30 days" }[listedFilter];
+    if (listed) labelParts.push(`Listed ${listed}`);
+  }
+
+  return {
+    id: makeSavedSearchId(),
+    label: labelParts.join(" · ") || "Job search",
+    keyword,
+    location,
+    locationSearchTerms,
+    categoryFilter,
+    workModeFilter,
+    workTypeFilter,
+    salaryMinK,
+    salaryMaxK,
+    listedFilter,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function pushSavedSearch(snapshot) {
+  if (!snapshot) return loadSavedSearches();
+  const sig = (s) =>
+    JSON.stringify({
+      keyword: s.keyword,
+      location: s.location,
+      locationSearchTerms: s.locationSearchTerms,
+      categoryFilter: s.categoryFilter,
+      workModeFilter: s.workModeFilter,
+      workTypeFilter: s.workTypeFilter,
+      salaryMinK: s.salaryMinK,
+      salaryMaxK: s.salaryMaxK,
+      listedFilter: s.listedFilter,
+    });
+  const prev = loadSavedSearches().filter((s) => sig(s) !== sig(snapshot));
+  return persistSavedSearches([{ ...snapshot, id: snapshot.id || makeSavedSearchId() }, ...prev].slice(0, 12));
+}
+
+function removeSavedSearchById(id) {
+  return persistSavedSearches(loadSavedSearches().filter((s) => s.id !== id));
+}
+
+function describeSavedSearch(search, jobCategories) {
+  const lines = [];
+  if (search.keyword) lines.push(`Keywords: ${search.keyword}`);
+  if (search.location) lines.push(`Where: ${search.location}`);
+  else if (search.locationSearchTerms?.length) {
+    lines.push(`Where: ${search.locationSearchTerms.join(", ")}`);
+  }
+  if (search.categoryFilter) {
+    const cat = jobCategories.find((c) => String(c.id) === String(search.categoryFilter));
+    lines.push(`Classification: ${cat?.name || "Selected category"}`);
+  }
+  if (search.workModeFilter) lines.push(`Remote: ${formatWorkModeLabel(search.workModeFilter)}`);
+  if (search.workTypeFilter) {
+    const wt = { fulltime: "Full-time", parttime: "Part-time", casual: "Casual", contract: "Contract" }[
+      search.workTypeFilter
+    ];
+    if (wt) lines.push(`Work type: ${wt}`);
+  }
+  if (search.salaryMinK > 0 || search.salaryMaxK < 350) {
+    lines.push(`Pay: ${formatSalaryPillLabel(search.salaryMinK)} – ${search.salaryMaxK >= 350 ? "$350K+" : formatSalaryPillLabel(search.salaryMaxK)}`);
+  }
+  if (search.listedFilter) {
+    const listed = { "1": "24 hours", "3": "3 days", "7": "7 days", "14": "14 days", "30": "30 days" }[
+      search.listedFilter
+    ];
+    if (listed) lines.push(`Listed: last ${listed}`);
+  }
+  return lines;
 }
 
 function isRecentlyPosted(iso) {
@@ -2004,7 +2182,8 @@ function CandidateHomePage() {
   const [listedFilter, setListedFilter] = useState("");
   const [hiddenJobIds, setHiddenJobIds] = useState(() => new Set());
   const [savedJobIds, setSavedJobIds] = useState(() => loadSavedJobIds());
-  const [recentSearches, setRecentSearches] = useState(() => loadRecentSearches());
+  const [savedSearches, setSavedSearches] = useState(() => loadSavedSearches());
+  const showSavedSearchesPanel = location.hash === "#saved-searches";
 
   const appliedJobIds = useMemo(() => new Set(applications.map((a) => a.job)), [applications]);
 
@@ -2183,11 +2362,15 @@ function CandidateHomePage() {
     [displayJobs, selectedJobId],
   );
 
-  async function runJobSearch() {
+  async function runJobSearch(overrides = {}, { saveSnapshot = true } = {}) {
     setError("");
-    const q = keyword.trim();
-    const loc = locationFilter.trim();
-    if (!q && !loc && !locationSearchTerms.length) {
+    const q = (overrides.keyword !== undefined ? overrides.keyword : keyword).trim();
+    const loc = (overrides.locationFilter !== undefined ? overrides.locationFilter : locationFilter).trim();
+    const locTerms =
+      overrides.locationSearchTerms !== undefined ? overrides.locationSearchTerms : locationSearchTerms;
+    const cat = overrides.categoryFilter !== undefined ? overrides.categoryFilter : categoryFilter;
+    const wm = overrides.workModeFilter !== undefined ? overrides.workModeFilter : workModeFilter;
+    if (!q && !loc && !locTerms.length) {
       setShowingSearchResults(false);
       setSearchResults([]);
       return;
@@ -2196,16 +2379,30 @@ function CandidateHomePage() {
     try {
       const params = new URLSearchParams();
       if (q) params.set("keyword", q);
-      if (categoryFilter) params.set("category", categoryFilter);
-      if (workModeFilter) params.set("work_mode", workModeFilter);
-      if (locationSearchTerms.length) params.set("loc_terms", locationSearchTerms.join(","));
+      if (cat) params.set("category", cat);
+      if (wm) params.set("work_mode", wm);
+      if (locTerms.length) params.set("loc_terms", locTerms.join(","));
       else if (loc) params.set("location", loc);
       const rows = await api(`/api/jobs/search?${params.toString()}`);
       const list = Array.isArray(rows) ? rows : [];
       setSearchResults(list);
       setShowingSearchResults(true);
       setSelectedJobId(list[0]?.id ?? null);
-      if (q) setRecentSearches(pushRecentSearch(q));
+      if (saveSnapshot) {
+        const snapshot = buildSavedSearchSnapshot({
+          keyword: q,
+          locationFilter: loc,
+          locationSearchTerms: locTerms,
+          categoryFilter: cat,
+          workModeFilter: wm,
+          workTypeFilter:
+            overrides.workTypeFilter !== undefined ? overrides.workTypeFilter : workTypeFilter,
+          salaryMinK: overrides.salaryMinK !== undefined ? overrides.salaryMinK : salaryMinK,
+          salaryMaxK: overrides.salaryMaxK !== undefined ? overrides.salaryMaxK : salaryMaxK,
+          listedFilter: overrides.listedFilter !== undefined ? overrides.listedFilter : listedFilter,
+        });
+        if (snapshot) setSavedSearches(pushSavedSearch(snapshot));
+      }
     } catch (err) {
       setError(String(err.message || err));
     } finally {
@@ -2232,29 +2429,47 @@ function CandidateHomePage() {
     );
   }
 
-  function applyRecentChip(q) {
-    setKeyword(q);
-    setSearchLoading(true);
-    setError("");
-    (async () => {
-      try {
-        const params = new URLSearchParams();
-        params.set("keyword", q);
-        if (categoryFilter) params.set("category", categoryFilter);
-        if (workModeFilter) params.set("work_mode", workModeFilter);
-        if (locationSearchTerms.length) params.set("loc_terms", locationSearchTerms.join(","));
-        else if (locationFilter.trim()) params.set("location", locationFilter.trim());
-        const rows = await api(`/api/jobs/search?${params.toString()}`);
-        const list = Array.isArray(rows) ? rows : [];
-        setSearchResults(list);
-        setShowingSearchResults(true);
-        setSelectedJobId(list[0]?.id ?? null);
-      } catch (err) {
-        setError(String(err.message || err));
-      } finally {
-        setSearchLoading(false);
-      }
-    })();
+  function applySavedSearch(search) {
+    const nextKeyword = search.keyword || "";
+    const nextLocation = search.location || "";
+    const nextLocTerms = Array.isArray(search.locationSearchTerms) ? [...search.locationSearchTerms] : [];
+    const nextCategory = search.categoryFilter || "";
+    const nextWorkMode = search.workModeFilter || "";
+    const nextWorkType = search.workTypeFilter || "";
+    const nextSalaryMin = Number(search.salaryMinK) || 0;
+    const nextSalaryMax = Number(search.salaryMaxK) ?? 350;
+    const nextListed = search.listedFilter || "";
+    setKeyword(nextKeyword);
+    setLocationFilter(nextLocation);
+    setLocationSearchTerms(nextLocTerms);
+    setCategoryFilter(nextCategory);
+    setWorkModeFilter(nextWorkMode);
+    setWorkTypeFilter(nextWorkType);
+    setSalaryMinK(nextSalaryMin);
+    setSalaryMaxK(nextSalaryMax);
+    setListedFilter(nextListed);
+    setWhereSuggestions([]);
+    setWhereSuggestOpen(false);
+    setOpenPill(null);
+    navigate("/", { replace: true });
+    runJobSearch(
+      {
+        keyword: nextKeyword,
+        locationFilter: nextLocation,
+        locationSearchTerms: nextLocTerms,
+        categoryFilter: nextCategory,
+        workModeFilter: nextWorkMode,
+        workTypeFilter: nextWorkType,
+        salaryMinK: nextSalaryMin,
+        salaryMaxK: nextSalaryMax,
+        listedFilter: nextListed,
+      },
+      { saveSnapshot: false },
+    );
+  }
+
+  function deleteSavedSearch(id) {
+    setSavedSearches(removeSavedSearchById(id));
   }
 
   function toggleSavedJob(jobId) {
@@ -2321,7 +2536,7 @@ function CandidateHomePage() {
                 <input
                   className="jobsSeekInput"
                   id="jobs-seek-where"
-                  placeholder="Start typing for place suggestions"
+                  placeholder="Suburb or state (e.g. Sydney, NSW)"
                   value={locationFilter}
                   autoComplete="off"
                   aria-autocomplete="list"
@@ -2356,7 +2571,7 @@ function CandidateHomePage() {
                         role="option"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
-                          const label = s.label || "";
+                          const label = (s.label || "").trim();
                           const terms =
                             Array.isArray(s.terms) && s.terms.length
                               ? s.terms.map((t) => String(t).toLowerCase())
@@ -2551,22 +2766,73 @@ function CandidateHomePage() {
         </div>
       </section>
 
-      {recentSearches.length > 0 && (
-        <div id="saved-searches" className="jobsSeekRecentBar candidateScrollAnchor" tabIndex={-1}>
-          <div className="jobsSeekRecentInner">
-            {recentSearches.map((q) => (
-              <button key={q} type="button" className="jobsSeekRecentChip" onClick={() => applyRecentChip(q)}>
-                {q}
-              </button>
-            ))}
+      {showSavedSearchesPanel ? (
+        <section id="saved-searches" className="jobsSeekSavedPanel candidateScrollAnchor" tabIndex={-1} aria-labelledby="saved-searches-heading">
+          <div className="jobsSeekSavedPanelInner">
+            <div className="jobsSeekSavedPanelHead">
+              <div>
+                <h2 id="saved-searches-heading" className="jobsSeekSavedPanelTitle">
+                  Saved searches
+                </h2>
+                <p className="jobsSeekSavedPanelLead muted">
+                  Re-run a previous search with the same keywords, location, and filters.
+                </p>
+              </div>
+              <Link className="jobsSeekLinkBtn" to="/">
+                Back to jobs
+              </Link>
+            </div>
+            {savedSearches.length === 0 ? (
+              <div className="jobsSeekSavedEmpty">
+                <p>No saved searches yet.</p>
+                <p className="muted">Run a search from the bar above — we save your criteria here so you can open it again later.</p>
+                <Link className="jobsSeekCta jobsSeekSavedEmptyCta" to="/">
+                  Browse jobs
+                </Link>
+              </div>
+            ) : (
+              <ul className="jobsSeekSavedList">
+                {savedSearches.map((search) => {
+                  const details = describeSavedSearch(search, jobCategories);
+                  return (
+                    <li key={search.id} className="jobsSeekSavedCard">
+                      <div className="jobsSeekSavedCardBody">
+                        <h3 className="jobsSeekSavedCardTitle">{search.label}</h3>
+                        {details.length > 0 ? (
+                          <ul className="jobsSeekSavedCardMeta">
+                            {details.map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {search.savedAt ? (
+                          <p className="jobsSeekSavedCardDate muted">
+                            Saved {new Date(search.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="jobsSeekSavedCardActions">
+                        <button type="button" className="jobsSeekCta jobsSeekSavedRunBtn" onClick={() => applySavedSearch(search)}>
+                          Run search
+                        </button>
+                        <button type="button" className="jobsSeekLinkBtn" onClick={() => deleteSavedSearch(search.id)}>
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
 
       {status && <p className="success jobsSeekFlash">{status}</p>}
       {error && <p className="error jobsSeekFlash">{error}</p>}
       {jobsError && <p className="error jobsSeekFlash">{jobsError}</p>}
 
+      {!showSavedSearchesPanel ? (
       <div className="jobsSeekBody">
         <div className="jobsSeekMain">
           <div className="jobsSeekListHeaderRow">
@@ -2575,7 +2841,7 @@ function CandidateHomePage() {
                 ? "Loading…"
                 : showingSearchResults
                   ? `${displayJobs.length} search result${displayJobs.length === 1 ? "" : "s"}`
-                  : `${displayJobs.length} role${displayJobs.length === 1 ? "" : "s"} ranked for you`}
+                  : "Best matching roles for you"}
               {!showingSearchResults && loadingRecs ? " · Updating match scores" : ""}
             </p>
             {showingSearchResults ? (
@@ -2681,17 +2947,21 @@ function CandidateHomePage() {
                         <button
                           type="button"
                           className="jobsSeekIconBtn"
-                          title="Hide this job"
-                          aria-label="Hide this job"
+                          title="Remove from list"
+                          aria-label="Remove from list"
                           onClick={(e) => {
                             e.stopPropagation();
                             hideJob(j.id);
                           }}
                         >
-                          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                          <svg className="jobsSeekIconSvg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                             <path
-                              d="M6.3 5.7 18.2 17.6l-1.1 1.1L14 15.6c-1.2.7-2.5 1-4 1-4 0-7.2-3-8.5-4.5a1 1 0 0 1 0-1.3c.5-.6 1.3-1.4 2.2-2.1L5.2 6.8 6.3 5.7Zm3.4 3.4-1.9 1.9c-.7.5-1.3 1-1.7 1.4.9.8 2.8 2.3 5 2.3 1 0 1.9-.2 2.7-.5l-2-2c-.3.1-.6.2-1 .2a2.5 2.5 0 0 1-2.1-3.3Zm4.5-.5 2 2c.2-.5.3-1 .3-1.5a2.5 2.5 0 0 0-2.3-2.5Zm6.5 4.9c.5.4.9.8 1.2 1.1a1 1 0 0 1 0 1.3C19.2 17.4 16 20 12 20c-1.5 0-2.8-.3-4-.9l-1.6 1.6-1.1-1.1L17.9 6.8l1.1 1.1ZM13.5 12l-1.5 1.5c.2.1.4.2.7.2.8 0 1.5-.7 1.5-1.5 0-.3-.1-.5-.2-.7Z"
-                              fill="currentColor"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.75"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 7h14M9.5 7V5.5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2V7M6.5 7h11v10.5a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V7M10 11v5.5M14 11v5.5"
                             />
                           </svg>
                         </button>
@@ -2722,6 +2992,7 @@ function CandidateHomePage() {
           )}
         </aside>
       </div>
+      ) : null}
 
       <footer className="jobsSeekFooter">
         © {new Date().getFullYear()} SkillMesh · {user?.email}
@@ -2731,7 +3002,8 @@ function CandidateHomePage() {
 }
 
 function CandidateDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const skillSuggestRef = useRef(null);
 
@@ -2791,6 +3063,7 @@ function CandidateDashboard() {
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumePreview, setResumePreview] = useState(null);
   const [savedJobsCount, setSavedJobsCount] = useState(() => loadSavedJobIds().size);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     const bump = () => setSavedJobsCount(loadSavedJobIds().size);
@@ -3112,6 +3385,25 @@ function CandidateDashboard() {
     setWorkRows((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index).map((r, i) => ({ ...r, sort_order: i }))));
   }
 
+  async function deleteAccount() {
+    const typed = window.prompt(
+      "This permanently deletes your SkillMesh account and applications. Type DELETE to confirm.",
+    );
+    if (typed !== "DELETE") return;
+    setDeletingAccount(true);
+    setError("");
+    setStatus("");
+    try {
+      await api("/api/auth/me", { method: "DELETE" });
+      logout();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setError(String(err.message || err) || "Could not delete account.");
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
+
   async function deleteResume(id) {
     if (!window.confirm("Remove this resume from your profile?")) return;
     try {
@@ -3353,18 +3645,24 @@ function CandidateDashboard() {
             <h3 className="candidateDashSubheading">Preferred job categories</h3>
             <p className="candidateDashCardHint candidateDashCardHintTight">
               Matching jobs appear first on your home feed; we also use this for future recommendations.
+              {categoryIds.length > 0 ? ` ${categoryIds.length} selected.` : " Pick at least one."}
             </p>
-            <div className="candidateDashCategoryGrid">
-              {jobCategories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`candidateDashCatPill ${categoryIds.includes(c.id) ? "candidateDashCatPillOn" : ""}`}
-                  onClick={() => toggleCategory(c.id)}
-                >
-                  {c.name}
-                </button>
-              ))}
+            <div className="candidateDashCategoryGrid categoryGrid" role="group" aria-label="Preferred job categories">
+              {jobCategories.map((c) => {
+                const on = categoryIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`categoryPill candidateDashCatPill ${on ? "categoryPillActive candidateDashCatPillOn" : ""}`}
+                    aria-pressed={on}
+                    onClick={() => toggleCategory(c.id)}
+                  >
+                    {on ? <span className="categoryPillCheck" aria-hidden="true">✓</span> : null}
+                    {c.name}
+                  </button>
+                );
+              })}
             </div>
 
             <h3 className="candidateDashSubheading">Skills</h3>
@@ -3605,6 +3903,23 @@ function CandidateDashboard() {
                 {savingProfile ? "Saving…" : "Save changes"}
               </button>
             </div>
+          </article>
+
+          <article className="candidateDashCard candidateDashAccountDanger" aria-labelledby="dash-account-heading">
+            <h2 id="dash-account-heading" className="candidateDashCardTitle">
+              Account
+            </h2>
+            <p className="candidateDashCardHint">
+              Permanently remove your candidate account, profile, resumes, and applications from SkillMesh. This cannot be undone.
+            </p>
+            <button
+              type="button"
+              className="candidateDashDeleteAccountBtn"
+              disabled={deletingAccount}
+              onClick={deleteAccount}
+            >
+              {deletingAccount ? "Deleting…" : "Delete account"}
+            </button>
           </article>
         </div>
       </div>

@@ -1,8 +1,10 @@
 from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.permissions import IsCandidate
 from .models import Application
@@ -17,7 +19,7 @@ class ApplicationListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return (
             Application.objects.filter(candidate=self.request.user)
-            .select_related("resume", "job")
+            .select_related("resume", "job", "job__employer", "job__employer__company_profile")
             .order_by("-created_at")
         )
 
@@ -34,3 +36,20 @@ class ApplicationListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(candidate=self.request.user)
+
+
+class ApplicationWithdrawView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def post(self, request, pk):
+        app = get_object_or_404(
+            Application.objects.filter(candidate=request.user),
+            pk=pk,
+        )
+        if app.status == Application.Status.WITHDRAWN:
+            return Response(ApplicationSerializer(app, context={"request": request}).data)
+        if app.status in (Application.Status.ACCEPTED, Application.Status.REJECTED):
+            raise ValidationError({"detail": "This application can no longer be withdrawn."})
+        app.status = Application.Status.WITHDRAWN
+        app.save(update_fields=["status"])
+        return Response(ApplicationSerializer(app, context={"request": request}).data)
