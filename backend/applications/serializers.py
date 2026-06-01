@@ -7,6 +7,20 @@ from employers.models import JobPosting
 from .models import Application
 
 
+class ApplicationJobBriefSerializer(serializers.ModelSerializer):
+    """Job snapshot for a candidate's own applications (includes closed listings)."""
+
+    company_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobPosting
+        fields = ("id", "title", "company_info", "location", "work_mode", "status", "created_at")
+
+    def get_company_info(self, obj):
+        profile = getattr(obj.employer, "company_profile", None)
+        return (profile.company_name if profile else "") or "Employer"
+
+
 class ResumeBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResumeDocument
@@ -17,6 +31,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
     """Candidate list/create: resume PK on write, nested brief on read."""
 
     resume_detail = ResumeBriefSerializer(source="resume", read_only=True)
+    job_detail = ApplicationJobBriefSerializer(source="job", read_only=True)
     cover_letter = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
@@ -25,6 +40,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
             "id",
             "candidate",
             "job",
+            "job_detail",
             "status",
             "created_at",
             "resume",

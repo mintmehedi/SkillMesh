@@ -10,6 +10,7 @@ class Application(models.Model):
         REVIEWING = "reviewing", "Reviewing"
         REJECTED = "rejected", "Rejected"
         ACCEPTED = "accepted", "Accepted"
+        WITHDRAWN = "withdrawn", "Withdrawn"
 
     class CoverLetterMode(models.TextChoices):
         NONE = "none", "No cover letter"

@@ -58,6 +58,10 @@ class MeView(generics.GenericAPIView):
     def get(self, request):
         return Response(self.get_serializer(request.user).data)
 
+    def delete(self, request):
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class EmailLoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
@@ -182,10 +186,6 @@ class PlaceSearchAutocompleteView(views.APIView):
         out = []
         seen_labels = set()
         for row in rows:
-            label = (row.get("display_name") or "").strip()
-            if not label or label.lower() in seen_labels:
-                continue
-            seen_labels.add(label.lower())
             addr = row.get("address") or {}
             terms = []
             term_seen = set()
@@ -201,19 +201,35 @@ class PlaceSearchAutocompleteView(views.APIView):
                 terms.append(low)
 
             for key in (
+                "suburb",
                 "city",
                 "town",
                 "village",
                 "municipality",
                 "hamlet",
-                "suburb",
-                "county",
                 "state",
                 "region",
-                "postcode",
-                "country",
             ):
                 add_term(addr.get(key))
+
+            label_parts = []
+            for key in ("suburb", "city", "town", "village", "municipality", "hamlet"):
+                val = (addr.get(key) or "").strip()
+                if val:
+                    label_parts.append(val)
+                    break
+            state = (addr.get("state") or addr.get("region") or "").strip()
+            if state:
+                label_parts.append(state)
+            label = ", ".join(label_parts).strip()
+            if not label:
+                display = (row.get("display_name") or "").strip()
+                if display:
+                    chunks = [c.strip() for c in display.split(",") if c.strip()]
+                    label = ", ".join(chunks[:2]) if chunks else display
+            if not label or label.lower() in seen_labels:
+                continue
+            seen_labels.add(label.lower())
             lat = row.get("lat")
             lon = row.get("lon")
             try:

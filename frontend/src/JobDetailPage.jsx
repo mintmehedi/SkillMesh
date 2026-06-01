@@ -77,6 +77,22 @@ export function JobDetailPage() {
         }
         return;
       }
+      if (user?.role === "candidate") {
+        try {
+          const apps = await api("/api/applications/");
+          const app = Array.isArray(apps) ? apps.find((a) => Number(a.job) === idNum) : null;
+          if (!cancelled && app?.job_detail) {
+            setJob({
+              ...app.job_detail,
+              company_info: app.job_detail.company_info || "Employer",
+            });
+            setLoadError("");
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
       if (authLoading) {
         return;
       }
@@ -127,10 +143,12 @@ export function JobDetailPage() {
     };
   }, [user]);
 
-  const hasApplied = useMemo(
-    () => applications.some((a) => a.job === idNum),
+  const applicationForJob = useMemo(
+    () => applications.find((a) => Number(a.job) === idNum) || null,
     [applications, idNum],
   );
+
+  const hasApplied = Boolean(applicationForJob);
 
   const bookmarkSaved = useMemo(
     () => validId && loadSavedJobIds().has(idNum),
@@ -276,6 +294,21 @@ export function JobDetailPage() {
                 </Link>
               </div>
             )}
+            {hasApplied && String(job.status || "").toLowerCase() === "closed" ? (
+              <div className="candidateAppliedJobsClosedBar jobDetailAppliedClosedBar" role="status">
+                <strong>Listing update</strong>
+                <p>
+                  This employer has closed the job listing. Your application remains on file
+                  {applicationForJob?.status
+                    ? ` (status: ${String(applicationForJob.status).replace(/^\w/, (c) => c.toUpperCase())})`
+                    : ""}
+                  . Check Applied jobs for updates.
+                </p>
+                <Link className="jobsSeekLinkBtn" to="/candidate/applied-jobs">
+                  View applied jobs
+                </Link>
+              </div>
+            ) : null}
             <div className="jobDetailMetaBar">
               {job.created_at && (
                 <span className="jobDetailPosted">Posted {formatPostedShort(job.created_at)}</span>

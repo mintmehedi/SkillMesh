@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { formatApiError } from "./apiErrors";
 import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { companyAvatarLetter, formatPostedShort, formatWorkModeLabel } from "./jobFormatters";
 
@@ -11,6 +12,7 @@ function formatApplicationStatus(status) {
     reviewing: "Reviewing",
     rejected: "Rejected",
     accepted: "Accepted",
+    withdrawn: "Withdrawn",
   };
   return map[s] || (status ? String(status) : "—");
 }
@@ -26,39 +28,35 @@ function formatSubmittedAt(iso) {
   });
 }
 
+function jobListingClosedMessage(job) {
+  if (!job) return null;
+  const st = String(job.status || "").toLowerCase();
+  if (st === "closed") {
+    return "This employer has closed the job listing. Your application remains on file; status updates may still appear here.";
+  }
+  if (st === "draft") {
+    return "This listing is no longer public. Your application is still recorded.";
+  }
+  return null;
+}
+
 export function CandidateAppliedJobsPage() {
   const [applications, setApplications] = useState([]);
-  const [jobsById, setJobsById] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [withdrawingId, setWithdrawingId] = useState(null);
+  const [actionError, setActionError] = useState("");
+  const [actionStatus, setActionStatus] = useState("");
 
   const refreshApplications = useCallback(async () => {
     setLoadError("");
     setLoading(true);
     try {
       const rows = await api("/api/applications/");
-      const list = Array.isArray(rows) ? rows : [];
-      setApplications(list);
-      const jobIds = [...new Set(list.map((a) => Number(a.job)).filter((n) => Number.isInteger(n) && n > 0))];
-      const entries = await Promise.all(
-        jobIds.map(async (id) => {
-          try {
-            const j = await api(`/api/jobs/${id}/`, { withAuth: false });
-            return j && j.id ? [id, j] : [id, null];
-          } catch {
-            return [id, null];
-          }
-        }),
-      );
-      const m = {};
-      for (const [id, j] of entries) {
-        if (j) m[id] = j;
-      }
-      setJobsById(m);
+      setApplications(Array.isArray(rows) ? rows : []);
     } catch (err) {
       setLoadError(String(err.message || err) || "Could not load applications.");
       setApplications([]);
-      setJobsById({});
     } finally {
       setLoading(false);
     }
@@ -73,10 +71,26 @@ export function CandidateAppliedJobsPage() {
       applications.map((a) => ({
         app: a,
         jobId: Number(a.job),
-        job: jobsById[Number(a.job)] || null,
+        job: a.job_detail || null,
       })),
-    [applications, jobsById],
+    [applications],
   );
+
+  async function withdrawApplication(appId) {
+    if (!window.confirm("Withdraw this application? Employers will no longer see it as active.")) return;
+    setActionError("");
+    setActionStatus("");
+    setWithdrawingId(appId);
+    try {
+      await api(`/api/applications/${appId}/withdraw`, { method: "POST" });
+      setActionStatus("Application withdrawn.");
+      await refreshApplications();
+    } catch (err) {
+      setActionError(formatApiError(err) || String(err.message || err) || "Could not withdraw application.");
+    } finally {
+      setWithdrawingId(null);
+    }
+  }
 
   return (
     <main className="homePage jobsSeekPage candidateAppliedJobsPage">
@@ -105,6 +119,8 @@ export function CandidateAppliedJobsPage() {
 
       <div className="candidateAppliedJobsBody">
         {loadError && <p className="error candidateAppliedJobsBanner">{loadError}</p>}
+        {actionStatus && <p className="success candidateAppliedJobsBanner">{actionStatus}</p>}
+        {actionError && <p className="error candidateAppliedJobsBanner">{actionError}</p>}
         {loading ? (
           <p className="muted candidateAppliedJobsLoading">Loading applications…</p>
         ) : rows.length === 0 ? (
@@ -119,59 +135,81 @@ export function CandidateAppliedJobsPage() {
           </div>
         ) : (
           <ul className="candidateAppliedJobsList">
-            {rows.map(({ app, jobId, job }) => (
-              <li key={app.id} className="candidateAppliedJobsCard">
-                <div className="candidateAppliedJobsCardTop">
-                  <div className="candidateAppliedJobsCardText">
-                    <div className="candidateAppliedJobsCardTitleRow">
-                      <h2 className="candidateAppliedJobsCardTitle">
-                        {job ? (
-                          <Link className="candidateAppliedJobsCardTitleLink" to={`/jobs/${jobId}`}>
-                            {job.title || `Job #${jobId}`}
-                          </Link>
-                        ) : (
-                          <span className="muted">Job #{jobId} (listing unavailable)</span>
-                        )}
-                      </h2>
-                      <span
-                        className={`candidateAppliedJobsStatus candidateAppliedJobsStatus--${String(app.status || "applied").toLowerCase()}`}
-                      >
-                        {formatApplicationStatus(app.status)}
-                      </span>
-                    </div>
-                    {job ? <p className="candidateAppliedJobsCompany">{job.company_info || "Employer"}</p> : null}
-                    {job ? (
-                      <ul className="candidateAppliedJobsFacts">
-                        <li>{formatWorkModeLabel(job.work_mode)}</li>
-                        <li>{job.location || "—"}</li>
-                        {job.created_at ? <li>Posted {formatPostedShort(job.created_at)}</li> : null}
-                      </ul>
-                    ) : (
-                      <p className="muted candidateAppliedJobsUnlistedNote">
-                        This job may have closed or been removed from the public board.
-                      </p>
-                    )}
-                  </div>
-                  {job ? (
-                    <div className="candidateAppliedJobsCardLogo" aria-hidden="true">
-                      {companyAvatarLetter(job.company_info, job.title)}
+            {rows.map(({ app, jobId, job }) => {
+              const closedNote = jobListingClosedMessage(job);
+              const canWithdraw =
+                !["withdrawn", "rejected", "accepted"].includes(String(app.status || "").toLowerCase());
+              return (
+                <li key={app.id} className="candidateAppliedJobsCard">
+                  {closedNote ? (
+                    <div className="candidateAppliedJobsClosedBar" role="status">
+                      <strong>Listing update</strong>
+                      <p>{closedNote}</p>
                     </div>
                   ) : null}
-                </div>
-                <div className="candidateAppliedJobsCardBottom">
-                  <span className="candidateAppliedJobsSubmitted muted">
-                    Submitted {formatSubmittedAt(app.created_at) || "—"}
-                  </span>
-                  <div className="candidateAppliedJobsCardActions">
+                  <div className="candidateAppliedJobsCardTop">
+                    <div className="candidateAppliedJobsCardText">
+                      <div className="candidateAppliedJobsCardTitleRow">
+                        <h2 className="candidateAppliedJobsCardTitle">
+                          {job ? (
+                            <Link className="candidateAppliedJobsCardTitleLink" to={`/jobs/${jobId}`}>
+                              {job.title || `Job #${jobId}`}
+                            </Link>
+                          ) : (
+                            <span className="muted">Job #{jobId} (listing unavailable)</span>
+                          )}
+                        </h2>
+                        <span
+                          className={`candidateAppliedJobsStatus candidateAppliedJobsStatus--${String(app.status || "applied").toLowerCase()}`}
+                        >
+                          {formatApplicationStatus(app.status)}
+                        </span>
+                      </div>
+                      {job ? <p className="candidateAppliedJobsCompany">{job.company_info || "Employer"}</p> : null}
+                      {job ? (
+                        <ul className="candidateAppliedJobsFacts">
+                          <li>{formatWorkModeLabel(job.work_mode)}</li>
+                          <li>{job.location || "—"}</li>
+                          {job.created_at ? <li>Posted {formatPostedShort(job.created_at)}</li> : null}
+                        </ul>
+                      ) : (
+                        <p className="muted candidateAppliedJobsUnlistedNote">
+                          This job may have closed or been removed from the public board. Your application is still on
+                          record.
+                        </p>
+                      )}
+                    </div>
                     {job ? (
-                      <Link className="jobsSeekLinkBtn" to={`/jobs/${jobId}`}>
-                        View listing
-                      </Link>
+                      <div className="candidateAppliedJobsCardLogo" aria-hidden="true">
+                        {companyAvatarLetter(job.company_info, job.title)}
+                      </div>
                     ) : null}
                   </div>
-                </div>
-              </li>
-            ))}
+                  <div className="candidateAppliedJobsCardBottom">
+                    <span className="candidateAppliedJobsSubmitted muted">
+                      Submitted {formatSubmittedAt(app.created_at) || "—"}
+                    </span>
+                    <div className="candidateAppliedJobsCardActions">
+                      {job && String(job.status || "").toLowerCase() === "open" ? (
+                        <Link className="jobsSeekLinkBtn" to={`/jobs/${jobId}`}>
+                          View listing
+                        </Link>
+                      ) : null}
+                      {canWithdraw ? (
+                        <button
+                          type="button"
+                          className="jobsSeekLinkBtn candidateAppliedJobsWithdrawBtn"
+                          disabled={withdrawingId === app.id}
+                          onClick={() => withdrawApplication(app.id)}
+                        >
+                          {withdrawingId === app.id ? "Withdrawing…" : "Withdraw application"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
