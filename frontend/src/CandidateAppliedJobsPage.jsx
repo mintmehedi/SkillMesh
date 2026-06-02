@@ -198,11 +198,22 @@ export function CandidateAppliedJobsPage() {
                       {canWithdraw ? (
                         <button
                           type="button"
-                          className="jobsSeekLinkBtn candidateAppliedJobsWithdrawBtn"
+                          className="jobsSeekIconBtn candidateAppliedJobsWithdrawBtn"
+                          title={withdrawingId === app.id ? "Withdrawing…" : "Withdraw application"}
+                          aria-label={withdrawingId === app.id ? "Withdrawing application" : "Withdraw application"}
                           disabled={withdrawingId === app.id}
                           onClick={() => withdrawApplication(app.id)}
                         >
-                          {withdrawingId === app.id ? "Withdrawing…" : "Withdraw application"}
+                          <svg className="jobsSeekIconSvg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                            <path
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.75"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H12"
+                            />
+                          </svg>
                         </button>
                       ) : null}
                     </div>

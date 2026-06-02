@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from candidates.models import CandidateProfile
 from employers.models import JobPosting
@@ -26,9 +27,36 @@ def _skill_tokens_in_text(skill_tokens, text):
     return n
 
 
+def _experience_years(candidate):
+    today = date.today()
+    years = 0.0
+    for row in candidate.work_experiences.all():
+        if not row.start_date:
+            continue
+        end = today if row.is_current or not row.end_date else row.end_date
+        if end < row.start_date:
+            continue
+        years += (end - row.start_date).days / 365.25
+    return max(0.0, round(years, 2))
+
+
+def _experience_text_blob(candidate):
+    bits = []
+    for row in candidate.work_experiences.all():
+        bits.extend([row.job_title or "", row.company_name or "", row.description or ""])
+    return " ".join(b for b in bits if b).lower()
+
+
+def _education_text_blob(candidate):
+    bits = [candidate.education_level or "", candidate.major or ""]
+    for row in candidate.education_entries.all():
+        bits.extend([row.degree or "", row.field_of_study or "", row.major or "", row.description or ""])
+    return " ".join(b for b in bits if b).lower()
+
+
 def score_candidate_for_job(candidate, job, *, preferred_category_ids=None):
     """
-    Heuristic 0–100+ score: skills vs job (or text fallback), education, preferred category.
+    Heuristic multi-signal score for candidate/job alignment.
     """
     if preferred_category_ids is None:
         preferred_category_ids = set(candidate.preferred_job_categories.values_list("id", flat=True))
@@ -38,32 +66,70 @@ def score_candidate_for_job(candidate, job, *, preferred_category_ids=None):
     overlap = candidate_skills.intersection(job_skills)
 
     if job_skills:
-        skill_score = (len(overlap) / max(len(job_skills), 1)) * 70.0
+        skill_score = (len(overlap) / max(len(job_skills), 1)) * 50.0
     else:
         # Listings without structured skills: partial credit from title/JD vs candidate skills
         blob = f"{job.title or ''} {job.jd_text or ''}"
         hits = _skill_tokens_in_text(candidate_skills, blob)
-        skill_score = min(45.0, hits * 9.0) if candidate_skills else 0.0
+        skill_score = min(35.0, hits * 7.0) if candidate_skills else 0.0
 
-    education_score = 30.0 if (
-        not job.required_education
-        or (candidate.education_level or "").lower() in job.required_education.lower()
-        or job.required_education.lower() in (candidate.education_level or "").lower()
-    ) else 0.0
+    edu_blob = _education_text_blob(candidate)
+    req_education = (job.required_education or "").lower()
+    education_score = 0.0
+    if not req_education:
+        education_score = 8.0
+    elif req_education in edu_blob or any(t in edu_blob for t in req_education.split() if len(t) > 3):
+        education_score = 20.0
 
     category_score = 0.0
     if job.job_category_id and job.job_category_id in preferred_category_ids:
         category_score = 12.0
 
+    mode_score = 0.0
+    preferred_mode = (candidate.preferred_mode or "").strip().lower()
+    if preferred_mode and preferred_mode == (job.work_mode or "").strip().lower():
+        mode_score = 12.0
+
+    experience_score = 0.0
+    required_years = float(job.required_experience or 0)
+    candidate_years = _experience_years(candidate)
+    if required_years <= 0:
+        experience_score = 6.0
+    elif candidate_years >= required_years:
+        experience_score = 14.0
+    else:
+        experience_score = max(0.0, (candidate_years / required_years) * 14.0)
+
+    relevance_blob = f"{job.title or ''} {job.jd_text or ''}".lower()
+    exp_blob = _experience_text_blob(candidate)
+    experience_text_hits = 0
+    for token in {t for t in re.findall(r"\w+", relevance_blob) if len(t) > 4}:
+        if token in exp_blob:
+            experience_text_hits += 1
+    experience_text_bonus = min(8.0, float(experience_text_hits))
+
     text_bonus = 0.0
     if settings.FEATURE_FLAGS.get("enable_text_similarity", False):
         text_bonus = 0.0
 
-    total = round(skill_score + education_score + category_score + text_bonus, 2)
+    total = round(
+        skill_score
+        + education_score
+        + category_score
+        + mode_score
+        + experience_score
+        + experience_text_bonus
+        + text_bonus,
+        2,
+    )
     explanation = {
         "matched_skills": sorted(overlap),
         "education_match": education_score > 0,
         "category_preference": category_score > 0,
+        "work_mode_match": mode_score > 0,
+        "experience_years": candidate_years,
+        "required_experience_years": required_years,
+        "experience_text_hits": experience_text_hits,
         "skill_source": "structured" if job_skills else "text_fallback",
     }
     return total, explanation
@@ -103,7 +169,7 @@ def recommend_jobs_for_candidate(candidate_user, top_k=None):
     """
     candidate = (
         CandidateProfile.objects.filter(user=candidate_user)
-        .prefetch_related("skills", "preferred_job_categories")
+        .prefetch_related("skills", "preferred_job_categories", "work_experiences", "education_entries")
         .first()
     )
     if not candidate:

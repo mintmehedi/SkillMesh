@@ -143,6 +143,10 @@ export function EmployerApplicationsPage() {
             <Link className="employerJobsDashLink" to="/employer/company">
               Company profile
             </Link>
+            <span className="employerJobsSubnavSep">·</span>
+            <Link className="employerJobsDashLink" to="/employer/support">
+              Support
+            </Link>
             {user?.email ? (
               <>
                 <span className="employerJobsSubnavSep">·</span>

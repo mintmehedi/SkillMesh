@@ -1,14 +1,16 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "./auth";
+import { getRoleHomePath, isPremiumCandidate, useAuth } from "./auth";
 import ldLogo from "./assets/ld.png";
 
 export function CandidateMemberHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const homePath = getRoleHomePath(user);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const isPremium = isPremiumCandidate(user);
 
   const initials = useMemo(() => {
     const a = (user?.first_name || "").trim();
@@ -53,9 +55,14 @@ export function CandidateMemberHeader() {
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
       <div className="homeHeaderLead">
-        <Link to="/" className="homeHeaderBrand candidateHeaderBrand">
+        <Link to={homePath} className="homeHeaderBrand candidateHeaderBrand">
           <img className="homeHeaderLogo" src={ldLogo} alt="" />
           <span className="homeHeaderWordmark">SkillMesh</span>
+          {isPremium ? (
+            <span className="candidatePremiumBrandBadge" aria-label="Premium member" title="Premium member">
+              PRO
+            </span>
+          ) : null}
         </Link>
       </div>
       <div className="candidateProfileMenuRoot" ref={menuRef}>
@@ -80,7 +87,12 @@ export function CandidateMemberHeader() {
           <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate" onClick={() => setMenuOpen(false)}>
             Profile
           </Link>
-          <Link role="menuitem" className="candidateProfileMenuItem" to="/#saved-searches" onClick={() => setMenuOpen(false)}>
+          <Link
+            role="menuitem"
+            className="candidateProfileMenuItem"
+            to={isPremium ? "/#saved-searches" : "/candidate/settings/membership"}
+            onClick={() => setMenuOpen(false)}
+          >
             Saved searches
           </Link>
           <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate/saved-jobs" onClick={() => setMenuOpen(false)}>
@@ -89,7 +101,7 @@ export function CandidateMemberHeader() {
           <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate/applied-jobs" onClick={() => setMenuOpen(false)}>
             Applied jobs
           </Link>
-          <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate" onClick={() => setMenuOpen(false)}>
+          <Link role="menuitem" className="candidateProfileMenuItem" to="/candidate/settings" onClick={() => setMenuOpen(false)}>
             Settings
           </Link>
           <hr className="candidateProfileMenuRule" />

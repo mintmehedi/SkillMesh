@@ -20,11 +20,18 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost,.vercel.app").split(",")
-    if h.strip()
-]
+def _build_allowed_hosts() -> list[str]:
+    explicit = os.environ.get("ALLOWED_HOSTS", "").strip()
+    if explicit:
+        return [h.strip() for h in explicit.split(",") if h.strip()]
+    hosts = ["127.0.0.1", "localhost"]
+    vercel_url = (os.environ.get("VERCEL_URL") or "").strip()
+    if vercel_url:
+        hosts.append(vercel_url)
+    return hosts
+
+
+ALLOWED_HOSTS = _build_allowed_hosts()
 
 
 # Application definition
@@ -38,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'accounts',
     'candidates',
     'employers',
@@ -158,21 +166,81 @@ AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "accounts.authentication.JWTCookieAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("THROTTLE_ANON", "60/hour"),
+        "user": os.environ.get("THROTTLE_USER", "600/hour"),
+        "auth_anon": os.environ.get("THROTTLE_AUTH_ANON", "30/hour"),
+        "auth_user": os.environ.get("THROTTLE_AUTH_USER", "60/hour"),
+        "meta_autocomplete": os.environ.get("THROTTLE_META_AUTOCOMPLETE", "120/hour"),
+    },
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
+JWT_ACCESS_COOKIE_NAME = os.environ.get("JWT_ACCESS_COOKIE_NAME", "skillmesh_access")
+JWT_REFRESH_COOKIE_NAME = os.environ.get("JWT_REFRESH_COOKIE_NAME", "skillmesh_refresh")
+JWT_COOKIE_PATH = os.environ.get("JWT_COOKIE_PATH", "/")
+JWT_COOKIE_SAMESITE = os.environ.get("JWT_COOKIE_SAMESITE", "Lax")
+_jwt_cookie_secure_env = os.environ.get("JWT_COOKIE_SECURE", "").strip().lower()
+JWT_COOKIE_SECURE = (
+    _jwt_cookie_secure_env in ("1", "true", "yes")
+    if _jwt_cookie_secure_env
+    else (not DEBUG)
+)
+JWT_INCLUDE_TOKENS_IN_RESPONSE_BODY = os.environ.get(
+    "JWT_INCLUDE_TOKENS_IN_RESPONSE_BODY",
+    "true" if DEBUG else "false",
+).lower() == "true"
+
 CORS_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        ",".join(CORS_ALLOWED_ORIGINS),
+    ).split(",")
+    if o.strip()
+]
+
+# Upload limits (resume / cover letter validators in serializers)
+MAX_UPLOAD_SIZE_BYTES = int(os.environ.get("MAX_UPLOAD_SIZE_BYTES", str(10 * 1024 * 1024)))
+MAX_RESUME_UPLOAD_BYTES = int(os.environ.get("MAX_RESUME_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+MAX_COVER_LETTER_UPLOAD_BYTES = int(os.environ.get("MAX_COVER_LETTER_UPLOAD_BYTES", str(5 * 1024 * 1024)))
+DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
+FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
+
+CLAMAV_SCAN_ENABLED = os.environ.get("CLAMAV_SCAN_ENABLED", "false").lower() in ("1", "true", "yes")
+CLAMAV_SCAN_REQUIRED = os.environ.get("CLAMAV_SCAN_REQUIRED", "false").lower() in ("1", "true", "yes")
+CLAMAV_SCAN_COMMAND = os.environ.get("CLAMAV_SCAN_COMMAND", "").strip() or None
+CLAMAV_SCAN_TIMEOUT_SEC = int(os.environ.get("CLAMAV_SCAN_TIMEOUT_SEC", "60"))
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "true").lower() == "true"
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "true").lower() == "true"
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "same-origin"
+    X_FRAME_OPTIONS = "DENY"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

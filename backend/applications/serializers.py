@@ -1,8 +1,8 @@
-from pathlib import Path
-
+from django.conf import settings
 from rest_framework import serializers
 
 from candidates.models import ResumeDocument
+from core.upload_validation import validate_upload_file
 from employers.models import JobPosting
 from .models import Application
 
@@ -84,11 +84,14 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
         allowed_cv = (".pdf", ".docx")
         if cover_upload and cover_upload.name:
-            suf = Path(cover_upload.name.lower()).suffix
-            if suf not in allowed_cv:
-                raise serializers.ValidationError(
-                    {"cover_letter": "Cover letter must be a PDF or DOCX file."},
+            try:
+                validate_upload_file(
+                    cover_upload,
+                    allowed_extensions=allowed_cv,
+                    max_bytes=getattr(settings, "MAX_COVER_LETTER_UPLOAD_BYTES", 5 * 1024 * 1024),
                 )
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({"cover_letter": exc.detail}) from exc
 
         if mode == Application.CoverLetterMode.NONE:
             attrs["cover_letter_text"] = ""

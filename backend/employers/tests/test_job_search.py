@@ -100,3 +100,23 @@ class JobSearchApiTests(APITestCase):
         ids = [row["id"] for row in res.data]
         self.assertIn(self.job_bris.id, ids)
         self.assertNotIn(self.job_melb.id, ids)
+
+    def test_title_match_ranks_above_long_text_match(self):
+        decoy = JobPosting.objects.create(
+            employer=self.employer,
+            job_category=self.cat_nurse,
+            title="Care Assistant",
+            jd_text="This role mentions Registered Nurse in the detailed description only.",
+            location="Perth WA",
+            company_info="Acme Care",
+            work_mode=JobPosting.WorkMode.ONSITE,
+            status="open",
+        )
+        res = self.client.get("/api/jobs/search", {"keyword": "Registered Nurse"})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        ids = [row["id"] for row in res.data]
+        self.assertGreaterEqual(len(ids), 2)
+        self.assertIn(self.job_melb.id, ids)
+        self.assertIn(decoy.id, ids)
+        # Title hit should rank above JD-only mention (other title matches may sort by recency).
+        self.assertLess(ids.index(self.job_melb.id), ids.index(decoy.id))

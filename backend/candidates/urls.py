@@ -4,6 +4,8 @@ from .views import (
     CandidateListView,
     CandidateOnboardingAdvanceView,
     CandidateProfileBundleView,
+    CandidateSavedSearchDetailView,
+    CandidateSavedSearchListCreateView,
     CandidateProfileUpsertView,
     CandidateSearchView,
     EducationBulkView,
@@ -32,5 +34,7 @@ urlpatterns = [
     path("resume/", ResumeListView.as_view(), name="resume-list"),
     path("resume/<int:pk>/download/", ResumeDownloadView.as_view(), name="resume-download"),
     path("resume/<int:pk>/", ResumeDetailView.as_view(), name="resume-detail"),
+    path("saved-searches/", CandidateSavedSearchListCreateView.as_view(), name="candidate-saved-searches"),
+    path("saved-searches/<int:pk>/", CandidateSavedSearchDetailView.as_view(), name="candidate-saved-search-detail"),
     path("onboarding/advance", CandidateOnboardingAdvanceView.as_view(), name="candidate-onboarding-advance"),
 ]

@@ -1,7 +1,9 @@
+from django.conf import settings
 from rest_framework import serializers
 
+from core.upload_validation import validate_upload_file
 from employers.models import JobCategory
-from .models import CandidateEducation, CandidateProfile, CandidateSkill, ResumeDocument, WorkExperience
+from .models import CandidateEducation, CandidateProfile, CandidateSavedSearch, CandidateSkill, ResumeDocument, WorkExperience
 
 
 class ResumeDocumentBriefSerializer(serializers.ModelSerializer):
@@ -108,6 +110,33 @@ class JobCategoryBriefSerializer(serializers.ModelSerializer):
         fields = ("id", "slug", "name")
 
 
+class CandidateSearchResultSerializer(serializers.ModelSerializer):
+    """Employer candidate search: professional fields only (no contact/PII)."""
+
+    skills = CandidateSkillSerializer(many=True, read_only=True)
+    work_experiences = WorkExperienceSerializer(many=True, read_only=True)
+    education_entries = CandidateEducationSerializer(many=True, read_only=True)
+    preferred_job_categories = JobCategoryBriefSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CandidateProfile
+        fields = (
+            "id",
+            "full_name",
+            "headline",
+            "education_level",
+            "major",
+            "location",
+            "availability",
+            "preferred_mode",
+            "summary",
+            "skills",
+            "work_experiences",
+            "education_entries",
+            "preferred_job_categories",
+        )
+
+
 class CandidateProfileSerializer(serializers.ModelSerializer):
     skills = CandidateSkillSerializer(many=True, required=False)
     work_experiences = WorkExperienceSerializer(many=True, read_only=True)
@@ -178,10 +207,11 @@ class ResumeUploadSerializer(serializers.ModelSerializer):
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
     def validate_file(self, value):
-        name = (value.name or "").lower()
-        if not name.endswith(self.ALLOWED_EXTENSIONS):
-            raise serializers.ValidationError("Only PDF, DOCX, JPG, JPEG, and PNG files are supported.")
-        return value
+        return validate_upload_file(
+            value,
+            allowed_extensions=self.ALLOWED_EXTENSIONS,
+            max_bytes=getattr(settings, "MAX_RESUME_UPLOAD_BYTES", 10 * 1024 * 1024),
+        )
 
     class Meta:
         model = ResumeDocument
@@ -195,3 +225,9 @@ class ResumeUploadSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = ("raw_text", "parsed_json", "parsed_at", "created_at")
+
+
+class CandidateSavedSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CandidateSavedSearch
+        fields = ("id", "label", "payload", "created_at", "updated_at")

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
@@ -26,7 +27,30 @@ class AuthFlowTests(APITestCase):
             format="json",
         )
         self.assertEqual(login_res.status_code, status.HTTP_200_OK)
-        self.assertIn("access", login_res.data)
+        self.assertIn(settings.JWT_ACCESS_COOKIE_NAME, login_res.cookies)
+        me_res = self.client.get(reverse("me"))
+        self.assertEqual(me_res.status_code, status.HTTP_200_OK)
+
+    def test_logout_blacklists_refresh_cookie(self):
+        user = User.objects.create_user(
+            email="logout@test.com",
+            username="logout_user",
+            password="StrongPass123!",
+            role=User.Role.EMPLOYER,
+        )
+        login_res = self.client.post(
+            reverse("login"),
+            {"email": user.email, "password": "StrongPass123!"},
+            format="json",
+        )
+        self.assertEqual(login_res.status_code, status.HTTP_200_OK)
+        logout_res = self.client.post(reverse("logout"), {}, format="json")
+        self.assertEqual(logout_res.status_code, status.HTTP_200_OK)
+        # `delete_cookie` clears the value and expires the cookie rather than
+        # dropping it from the jar, so assert it has been emptied.
+        access_cookie = self.client.cookies.get(settings.JWT_ACCESS_COOKIE_NAME)
+        self.assertIsNotNone(access_cookie)
+        self.assertEqual(access_cookie.value, "")
 
     def test_employer_register_rejects_candidate_email(self):
         User.objects.create_user(
