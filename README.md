@@ -53,5 +53,13 @@ cd frontend
 npm install
 npm run dev
 ```
-Frontend runs at `http://localhost:5173/` (or port 3000).
-Vercel hosting domain : https://skill-mesh.vercel.app/
+Frontend runs at `http://localhost:5173/` (or port 3000). API calls use the Vite dev proxy (`/api` → `http://127.0.0.1:8000`) so JWT auth cookies work on the same origin. Do not set `VITE_API_BASE_URL` to the backend URL in local dev unless you also align cookie/CORS settings.
+
+Vercel hosting domain: https://skill-mesh.vercel.app/
+
+### Security (production)
+
+- Set `DEBUG=False`, a strong `DJANGO_SECRET_KEY`, and `ALLOWED_HOSTS` to your deployment hostname(s).
+- JWTs are stored in **HttpOnly cookies** (not `localStorage`). `CORS_ALLOW_CREDENTIALS` is enabled for cross-origin dev only.
+- Optional malware scanning: install ClamAV and set `CLAMAV_SCAN_ENABLED=true` on the server.
+- After pulling auth changes, run `python3 manage.py migrate` (includes `token_blacklist`).

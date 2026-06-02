@@ -84,6 +84,9 @@ export function EmployerMemberHeader() {
           <Link role="menuitem" className="candidateProfileMenuItem" to="/employer/company" onClick={() => setMenuOpen(false)}>
             Company profile
           </Link>
+          <Link role="menuitem" className="candidateProfileMenuItem" to="/employer/support" onClick={() => setMenuOpen(false)}>
+            Support & FAQ
+          </Link>
           <Link role="menuitem" className="candidateProfileMenuItem" to="/" onClick={() => setMenuOpen(false)}>
             Home
           </Link>

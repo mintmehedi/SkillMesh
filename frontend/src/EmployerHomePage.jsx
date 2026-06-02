@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "./auth";
+import { getRoleHomePath, useAuth } from "./auth";
 import { api } from "./api";
 import { formatApiError } from "./apiErrors";
 import ldLogo from "./assets/ld.png";
 
 export function EmployerHomePage() {
   const { user, logout } = useAuth();
+  const homePath = getRoleHomePath(user);
   const [invites, setInvites] = useState([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [invitesError, setInvitesError] = useState("");
@@ -64,7 +65,7 @@ export function EmployerHomePage() {
       <div className="employerLandingShell">
         <header className="employerLandingHeader">
           <div className="employerLandingTopRow">
-            <Link to="/" className="homeHeaderBrand employerLandingBrand" aria-label="SkillMesh — employer home">
+            <Link to={homePath} className="homeHeaderBrand employerLandingBrand" aria-label="SkillMesh — employer home">
               <img className="homeHeaderLogo" src={ldLogo} alt="" />
               <span className="homeHeaderWordmark">SkillMesh</span>
             </Link>
@@ -162,16 +163,25 @@ export function EmployerHomePage() {
             <p className="employerLandingCardText">Industry, location, and story — what applicants see before they apply.</p>
             <span className="employerLandingCardCta">Edit profile →</span>
           </Link>
-          <Link className="employerLandingCard employerLandingCardSoon" to="/employer/applications">
-            <span className="employerLandingSoonBadge">Coming soon</span>
+          <Link className="employerLandingCard" to="/employer/applications">
             <span className="employerLandingCardIcon" aria-hidden="true">
               📥
             </span>
             <h3 className="employerLandingCardTitle">Applications received</h3>
             <p className="employerLandingCardText">
-              Review who applied to each role and open candidate profiles. Full workflow is on the way.
+              Review who applied to each role and open candidate profiles from your hiring inbox.
             </p>
             <span className="employerLandingCardCta">View applications →</span>
+          </Link>
+          <Link className="employerLandingCard" to="/employer/support">
+            <span className="employerLandingCardIcon" aria-hidden="true">
+              🛟
+            </span>
+            <h3 className="employerLandingCardTitle">Support & FAQ</h3>
+            <p className="employerLandingCardText">
+              Contact the SkillMesh platform developer and get quick answers to common employer questions.
+            </p>
+            <span className="employerLandingCardCta">Open support →</span>
           </Link>
         </section>
       </div>

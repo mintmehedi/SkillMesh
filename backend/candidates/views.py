@@ -9,19 +9,22 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsCandidate
+from accounts.permissions import IsCandidate, IsEmployer
+from accounts.membership import is_premium_candidate
 from employers.models import JobCategory, JobSkill
 from employers.serializers import JobCategorySerializer
 
-from .models import CandidateEducation, CandidateProfile, CandidateSkill, ResumeDocument, WorkExperience
+from .models import CandidateEducation, CandidateProfile, CandidateSavedSearch, CandidateSkill, ResumeDocument, WorkExperience
 from .resume_llm import apply_llm_work_experiences_if_configured
 from .resume_parser import extract_text_from_upload, parse_resume_text
 from .serializers import (
     CandidateEducationSerializer,
     CandidateProfileSerializer,
+    CandidateSearchResultSerializer,
     ResumeDisplayNameSerializer,
     ResumeDocumentBriefSerializer,
     ResumeUploadSerializer,
+    CandidateSavedSearchSerializer,
     WorkExperienceSerializer,
 )
 from .skill_suggestions import suggest_skill_names
@@ -72,14 +75,22 @@ class CandidateProfileBundleView(APIView):
 
             if "education_entries" in body and body["education_entries"] is not None:
                 edu_ser = CandidateEducationSerializer(data=body["education_entries"], many=True)
-                edu_ser.is_valid(raise_exception=True)
+                if not edu_ser.is_valid():
+                    return Response(
+                        {"education_entries": edu_ser.errors},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 profile.education_entries.all().delete()
                 for row in edu_ser.validated_data:
                     CandidateEducation.objects.create(candidate=profile, **row)
 
             if "work_experiences" in body and body["work_experiences"] is not None:
                 work_ser = WorkExperienceSerializer(data=body["work_experiences"], many=True)
-                work_ser.is_valid(raise_exception=True)
+                if not work_ser.is_valid():
+                    return Response(
+                        {"work_experiences": work_ser.errors},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 profile.work_experiences.all().delete()
                 for row in work_ser.validated_data:
                     WorkExperience.objects.create(candidate=profile, **row)
@@ -123,14 +134,14 @@ class CandidateProfileUpsertView(generics.GenericAPIView):
 
 
 class CandidateListView(generics.ListAPIView):
-    serializer_class = CandidateProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CandidateSearchResultSerializer
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
     queryset = CandidateProfile.objects.all().order_by("-id")
 
 
 class CandidateSearchView(generics.ListAPIView):
-    serializer_class = CandidateProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CandidateSearchResultSerializer
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
 
     def get_queryset(self):
         qs = CandidateProfile.objects.all()
@@ -246,7 +257,10 @@ class ResumeListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCandidate]
 
     def get_queryset(self):
-        return ResumeDocument.objects.filter(candidate__user=self.request.user).order_by("-created_at")
+        qs = ResumeDocument.objects.filter(candidate__user=self.request.user).order_by("-created_at")
+        if not is_premium_candidate(self.request.user):
+            return qs[:1]
+        return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -301,7 +315,7 @@ class ResumeUploadView(generics.GenericAPIView):
         profile, _ = CandidateProfile.objects.get_or_create(
             user=request.user, defaults={"full_name": request.user.username or request.user.email}
         )
-        prior_onboarding_step = profile.onboarding_step
+        premium_user = is_premium_candidate(request.user)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         uploaded = serializer.validated_data["file"]
@@ -350,10 +364,85 @@ class ResumeUploadView(generics.GenericAPIView):
         for skill in parsed.get("skills", []):
             CandidateSkill.objects.get_or_create(candidate=profile, skill_name=skill, defaults={"level": 1})
 
-        if prior_onboarding_step == CandidateProfile.OnboardingStep.RESUME:
+        if not premium_user:
             ResumeDocument.objects.filter(candidate=profile).exclude(pk=resume.pk).delete()
 
         return Response(ResumeUploadSerializer(resume).data, status=status.HTTP_201_CREATED)
+
+
+class CandidateSavedSearchListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    serializer_class = CandidateSavedSearchSerializer
+
+    def get_queryset(self):
+        profile = CandidateProfile.objects.filter(user=self.request.user).first()
+        if not profile:
+            return CandidateSavedSearch.objects.none()
+        return CandidateSavedSearch.objects.filter(candidate=profile)
+
+    def _require_premium(self):
+        if not is_premium_candidate(self.request.user):
+            return Response(
+                {"detail": "Saved searches are available to premium members only.", "upgrade_cta": True},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+        return None
+
+    def list(self, request, *args, **kwargs):
+        blocked = self._require_premium()
+        if blocked:
+            return blocked
+        return super().list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        blocked = self._require_premium()
+        if blocked:
+            return blocked
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        profile, _ = CandidateProfile.objects.get_or_create(
+            user=self.request.user,
+            defaults={"full_name": self.request.user.get_full_name() or self.request.user.email},
+        )
+        serializer.save(candidate=profile)
+
+
+class CandidateSavedSearchDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    serializer_class = CandidateSavedSearchSerializer
+
+    def get_queryset(self):
+        profile = CandidateProfile.objects.filter(user=self.request.user).first()
+        if not profile:
+            return CandidateSavedSearch.objects.none()
+        return CandidateSavedSearch.objects.filter(candidate=profile)
+
+    def _premium_blocked(self, request):
+        if not is_premium_candidate(request.user):
+            return Response(
+                {"detail": "Saved searches are available to premium members only.", "upgrade_cta": True},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+        return None
+
+    def retrieve(self, request, *args, **kwargs):
+        blocked = self._premium_blocked(request)
+        if blocked:
+            return blocked
+        return super().retrieve(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        blocked = self._premium_blocked(request)
+        if blocked:
+            return blocked
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        blocked = self._premium_blocked(request)
+        if blocked:
+            return blocked
+        return super().destroy(request, *args, **kwargs)
 
 
 class ResumeReprocessView(generics.GenericAPIView):

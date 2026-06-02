@@ -102,37 +102,45 @@ class JobSearchView(generics.ListAPIView):
             .prefetch_related("skills")
         )
         keyword = (self.request.query_params.get("keyword") or "").strip()
+        token_list = [t for t in keyword.lower().split() if len(t) >= 2]
         if keyword:
-            qs = (
-                qs.annotate(
-                    _wot_txt=Cast("whats_on_offer", TextField()),
-                    _lfp_txt=Cast("looking_for_people_bullets", TextField()),
-                    _lfa_txt=Cast("looking_for_additional_bullets", TextField()),
-                    _rb_txt=Cast("role_bullets", TextField()),
-                    _wcu_txt=Cast("why_choose_us_bullets", TextField()),
+            qs = qs.annotate(
+                _wot_txt=Cast("whats_on_offer", TextField()),
+                _lfp_txt=Cast("looking_for_people_bullets", TextField()),
+                _lfa_txt=Cast("looking_for_additional_bullets", TextField()),
+                _rb_txt=Cast("role_bullets", TextField()),
+                _wcu_txt=Cast("why_choose_us_bullets", TextField()),
+            ).filter(
+                Q(title__icontains=keyword)
+                | Q(jd_text__icontains=keyword)
+                | Q(location__icontains=keyword)
+                | Q(company_info__icontains=keyword)
+                | Q(how_to_apply__icontains=keyword)
+                | Q(licenses_certifications__icontains=keyword)
+                | Q(job_category__name__icontains=keyword)
+                | Q(skills__skill_name__icontains=keyword)
+                | Q(employer__company_profile__location__icontains=keyword)
+                | Q(employer__company_profile__suburb__icontains=keyword)
+                | Q(employer__company_profile__city__icontains=keyword)
+                | Q(employer__company_profile__postcode__icontains=keyword)
+                | Q(employer__company_profile__state_region__icontains=keyword)
+                | Q(_wot_txt__icontains=keyword)
+                | Q(_lfp_txt__icontains=keyword)
+                | Q(_lfa_txt__icontains=keyword)
+                | Q(_rb_txt__icontains=keyword)
+                | Q(_wcu_txt__icontains=keyword)
+            ).distinct()
+            token_q = Q()
+            for tok in token_list:
+                token_q &= (
+                    Q(title__icontains=tok)
+                    | Q(skills__skill_name__icontains=tok)
+                    | Q(job_category__name__icontains=tok)
+                    | Q(jd_text__icontains=tok)
+                    | Q(company_info__icontains=tok)
                 )
-                .filter(
-                    Q(title__icontains=keyword)
-                    | Q(jd_text__icontains=keyword)
-                    | Q(location__icontains=keyword)
-                    | Q(company_info__icontains=keyword)
-                    | Q(how_to_apply__icontains=keyword)
-                    | Q(licenses_certifications__icontains=keyword)
-                    | Q(job_category__name__icontains=keyword)
-                    | Q(skills__skill_name__icontains=keyword)
-                    | Q(employer__company_profile__location__icontains=keyword)
-                    | Q(employer__company_profile__suburb__icontains=keyword)
-                    | Q(employer__company_profile__city__icontains=keyword)
-                    | Q(employer__company_profile__postcode__icontains=keyword)
-                    | Q(employer__company_profile__state_region__icontains=keyword)
-                    | Q(_wot_txt__icontains=keyword)
-                    | Q(_lfp_txt__icontains=keyword)
-                    | Q(_lfa_txt__icontains=keyword)
-                    | Q(_rb_txt__icontains=keyword)
-                    | Q(_wcu_txt__icontains=keyword)
-                )
-                .distinct()
-            )
+            if token_list:
+                qs = qs.filter(token_q)
 
         cat = (self.request.query_params.get("category") or "").strip()
         if cat.isdigit():
@@ -154,6 +162,15 @@ class JobSearchView(generics.ListAPIView):
         for t in terms:
             qs = qs.filter(_job_location_token_q(t))
 
+        if keyword:
+            qs = qs.annotate(
+                _rank_title=Case(When(title__icontains=keyword, then=Value(60)), default=Value(0), output_field=IntegerField()),
+                _rank_skill=Case(When(skills__skill_name__icontains=keyword, then=Value(30)), default=Value(0), output_field=IntegerField()),
+                _rank_category=Case(When(job_category__name__icontains=keyword, then=Value(20)), default=Value(0), output_field=IntegerField()),
+                _rank_text=Case(When(jd_text__icontains=keyword, then=Value(10)), default=Value(0), output_field=IntegerField()),
+                _rank_location=Case(When(location__icontains=keyword, then=Value(8)), default=Value(0), output_field=IntegerField()),
+            ).order_by("-_rank_title", "-_rank_skill", "-_rank_category", "-_rank_text", "-_rank_location", "-created_at")
+            return qs
         return qs.order_by("-created_at")
 
 

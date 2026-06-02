@@ -9,6 +9,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from candidates.models import CandidateProfile
 from employers.models import CompanyProfile, EmployerTeamInvite
 from employers.utils_workspace import workspace_owner
+from .membership import MEMBERSHIP_BENEFITS, MEMBERSHIP_PRICE, get_or_create_membership
+from .models import CandidateMembership
 
 
 User = get_user_model()
@@ -223,6 +225,7 @@ class CandidateRegisterSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     candidate_onboarding = serializers.SerializerMethodField()
     employer_company = serializers.SerializerMethodField()
+    membership = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -234,6 +237,7 @@ class MeSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "candidate_onboarding",
+            "membership",
             "employer_company",
         )
 
@@ -267,6 +271,39 @@ class MeSerializer(serializers.ModelSerializer):
             "is_team_member": is_member,
             "workspace_company_name": row.company_name if is_member else None,
         }
+
+    def get_membership(self, obj):
+        if obj.role != User.Role.CANDIDATE:
+            return None
+        row = get_or_create_membership(obj)
+        if not row:
+            return None
+        return {
+            "plan_type": row.plan_type,
+            "status": row.status,
+            "monthly_price": str(row.monthly_price or MEMBERSHIP_PRICE),
+            "member_since": row.member_since,
+            "cancelled_at": row.cancelled_at,
+            "benefits": MEMBERSHIP_BENEFITS,
+        }
+
+
+class CandidateMembershipSerializer(serializers.ModelSerializer):
+    benefits = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CandidateMembership
+        fields = (
+            "plan_type",
+            "status",
+            "monthly_price",
+            "member_since",
+            "cancelled_at",
+            "benefits",
+        )
+
+    def get_benefits(self, _obj):
+        return MEMBERSHIP_BENEFITS
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):

@@ -7,6 +7,7 @@ import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { JobPostingDetailPanel } from "./JobPostingDetailPanel";
 import { SiteBrandBar } from "./SiteBrandBar";
 import { formatPostedShort } from "./jobFormatters";
+import { BackButton } from "./BackButton";
 
 function employerPreviewMessage(job) {
   if (!job) return "";
@@ -237,6 +238,9 @@ export function JobDetailPage() {
             <Link className="jobDetailPageNavLink" to="/employer/applications">
               Applications received
             </Link>
+            <Link className="jobDetailPageNavLink" to="/employer/support">
+              Support
+            </Link>
           </nav>
         </header>
       ) : (
@@ -246,6 +250,10 @@ export function JobDetailPage() {
       )}
 
       <div className="jobDetailPageHero">
+        <div className="jobDetailBackRow">
+          <BackButton className="jobDetailBackBtn" fallbackTo={browseJobsTo} />
+          <span className="jobDetailBackLabel">Back</span>
+        </div>
         <nav className="jobDetailBreadcrumb" aria-label="Breadcrumb">
           <Link to={browseJobsTo}>Jobs</Link>
           <span className="jobDetailBreadcrumbSep" aria-hidden="true">

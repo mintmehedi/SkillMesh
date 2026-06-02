@@ -4,11 +4,14 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .geo_meta import AU_SUBURB_POSTCODES, COUNTRIES, STATES_BY_COUNTRY
+from .jwt_cookies import auth_response_with_cookies, clear_jwt_cookies, set_jwt_cookies, strip_tokens_from_response_data
+from .throttling import AuthAnonThrottle, MetaAutocompleteThrottle
+from .membership import get_or_create_membership
 from .serializers import (
+    CandidateMembershipSerializer,
     CandidateRegisterSerializer,
     EmailTokenObtainPairSerializer,
     MeSerializer,
@@ -30,23 +33,21 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthAnonThrottle]
 
 
 class RegisterCandidateView(generics.GenericAPIView):
     serializer_class = CandidateRegisterSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthAnonThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        return Response(
-            {
-                "user": MeSerializer(user).data,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-            },
+        return auth_response_with_cookies(
+            user,
+            {"user": MeSerializer(user).data},
             status=status.HTTP_201_CREATED,
         )
 
@@ -60,15 +61,72 @@ class MeView(generics.GenericAPIView):
 
     def delete(self, request):
         request.user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        clear_jwt_cookies(response)
+        return response
 
 
 class EmailLoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
+    throttle_classes = [AuthAnonThrottle]
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == status.HTTP_200_OK:
+            access = response.data.get("access")
+            refresh = response.data.get("refresh")
+            if access and refresh:
+                set_jwt_cookies(response, access, refresh)
+                strip_tokens_from_response_data(response)
+        return response
+
+
+class CandidateMembershipView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != User.Role.CANDIDATE:
+            return Response({"detail": "Candidate account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_membership(request.user)
+        return Response(CandidateMembershipSerializer(membership).data)
+
+
+class CandidateMembershipObtainView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.CANDIDATE:
+            return Response({"detail": "Candidate account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_membership(request.user)
+        membership.activate_premium()
+        return Response(CandidateMembershipSerializer(membership).data, status=status.HTTP_200_OK)
+
+
+class CandidateMembershipCancelView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.CANDIDATE:
+            return Response({"detail": "Candidate account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_membership(request.user)
+        membership.cancel()
+        return Response(CandidateMembershipSerializer(membership).data, status=status.HTTP_200_OK)
+
+
+class CandidateMembershipRenewView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.CANDIDATE:
+            return Response({"detail": "Candidate account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_membership(request.user)
+        membership.activate_premium()
+        return Response(CandidateMembershipSerializer(membership).data, status=status.HTTP_200_OK)
 
 
 class CountryAutocompleteView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         q = (request.query_params.get("q") or "").strip().lower()
@@ -107,6 +165,7 @@ class StateRegionAutocompleteView(views.APIView):
     """States / provinces for a country (ISO 3166-1 alpha-2). Empty list = type freely."""
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         cc = (request.query_params.get("country_code") or "").strip().upper()
@@ -123,6 +182,7 @@ class CityAutocompleteView(views.APIView):
     """City/town suggestions via Nominatim, scoped by country (and optional state context)."""
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         q = (request.query_params.get("q") or "").strip()
@@ -169,6 +229,7 @@ class PlaceSearchAutocompleteView(views.APIView):
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         q = (request.query_params.get("q") or "").strip()
@@ -245,6 +306,7 @@ class PlaceSearchAutocompleteView(views.APIView):
 
 class AuPostcodeAutocompleteView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         q = (request.query_params.get("q") or "").strip().lower()
@@ -310,6 +372,7 @@ class AuPostcodeAutocompleteView(views.APIView):
 
 class UsernameAvailabilityView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [MetaAutocompleteThrottle]
 
     def get(self, request):
         username = (request.query_params.get("username") or "").strip()

@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "./auth";
+import { getRoleHomePath, isPremiumCandidate, useAuth } from "./auth";
 import { SiteDatePicker } from "./SiteDatePicker";
 import { api, apiBlob } from "./api";
 import { BackButton } from "./BackButton";
@@ -15,6 +15,7 @@ import { CandidateAppliedJobsPage } from "./CandidateAppliedJobsPage";
 import { EmployerJobsPage } from "./EmployerJobsPage";
 import { EmployerHomePage } from "./EmployerHomePage";
 import { EmployerApplicationsPage } from "./EmployerApplicationsPage";
+import { EmployerSupportPage } from "./EmployerSupportPage";
 import {
   companyAvatarLetter,
   formatCompensationSummary,
@@ -141,9 +142,11 @@ function EyeIcon({ open }) {
 }
 
 function AuthBrand() {
+  const { user } = useAuth();
+
   return (
     <Link
-      to="/"
+      to={getRoleHomePath(user)}
       className="authBrand authBrandLink"
       aria-label="SkillMesh — go to homepage"
       title="Go to homepage"
@@ -1210,39 +1213,9 @@ export function CandidateOnboardingWorkExperience() {
 
   async function autoFillFromResume() {
     if (!resumeFile) {
-      // #region agent log
-      fetch("http://127.0.0.1:7880/ingest/bd22d204-09ad-4811-98c6-6dcf9f5fcce8", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9c37a0" },
-        body: JSON.stringify({
-          sessionId: "9c37a0",
-          location: "App.jsx:autoFillFromResume",
-          message: "blocked no file",
-          data: { hypothesisId: "A" },
-          timestamp: Date.now(),
-          hypothesisId: "A",
-        }),
-      }).catch(() => {});
-      // #endregion
       setResumeError("Please upload a resume first.");
       return;
     }
-    // #region agent log
-    const _fn = (resumeFile.name || "").toLowerCase();
-    const _ext = _fn.includes(".") ? _fn.split(".").pop() : "";
-    fetch("http://127.0.0.1:7880/ingest/bd22d204-09ad-4811-98c6-6dcf9f5fcce8", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9c37a0" },
-      body: JSON.stringify({
-        sessionId: "9c37a0",
-        location: "App.jsx:autoFillFromResume",
-        message: "upload start",
-        data: { hypothesisId: "B", ext: _ext, size: resumeFile.size, mime: resumeFile.type || "" },
-        timestamp: Date.now(),
-        hypothesisId: "B",
-      }),
-    }).catch(() => {});
-    // #endregion
     setUploading(true);
     setResumeError("");
     setStatus("");
@@ -1263,27 +1236,6 @@ export function CandidateOnboardingWorkExperience() {
       const warnLowConfidence = parsedRows.length > 0 && !llmSource && typeof confidence === "number" && confidence < 0.5;
       const warnLowEdu =
         studyRows.length > 0 && !eduLlmSource && typeof eduConfidence === "number" && eduConfidence < 0.5;
-      // #region agent log
-      fetch("http://127.0.0.1:7880/ingest/bd22d204-09ad-4811-98c6-6dcf9f5fcce8", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9c37a0" },
-        body: JSON.stringify({
-          sessionId: "9c37a0",
-          location: "App.jsx:autoFillFromResume",
-          message: "upload response",
-          data: {
-            hypothesisId: "C",
-            parsedCount: parsedRows.length,
-            confidence,
-            willFill,
-            warnLowConfidence,
-            hasParsedJson: !!resume?.parsed_json,
-          },
-          timestamp: Date.now(),
-          hypothesisId: "C",
-        }),
-      }).catch(() => {});
-      // #endregion
       if (willFill) {
         setWorkRows(parsedRows.map((r, idx) => ({ ...r, sort_order: idx })));
       } else {
@@ -1317,20 +1269,6 @@ export function CandidateOnboardingWorkExperience() {
       })();
       setStatus(`Resume parsed. ${workPart} ${eduPart}`);
     } catch (err) {
-      // #region agent log
-      fetch("http://127.0.0.1:7880/ingest/bd22d204-09ad-4811-98c6-6dcf9f5fcce8", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9c37a0" },
-        body: JSON.stringify({
-          sessionId: "9c37a0",
-          location: "App.jsx:autoFillFromResume",
-          message: "upload error",
-          data: { hypothesisId: "B", err: String(err?.message || err) },
-          timestamp: Date.now(),
-          hypothesisId: "B",
-        }),
-      }).catch(() => {});
-      // #endregion
       setResumeError(String(err.message || err));
     } finally {
       setUploading(false);
@@ -1841,11 +1779,24 @@ function makeSavedSearchId() {
   return `ss_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function loadSavedSearches() {
+function savedSearchStorageKey(scope = "guest") {
+  return `${LS_SAVED_SEARCHES}:${scope}`;
+}
+
+function loadSavedSearches(scope = "guest") {
+  const scopedKey = savedSearchStorageKey(scope);
   try {
-    const raw = JSON.parse(localStorage.getItem(LS_SAVED_SEARCHES) || "[]");
+    const raw = JSON.parse(localStorage.getItem(scopedKey) || "[]");
     if (Array.isArray(raw) && raw.length > 0) {
       return raw.filter((s) => s && typeof s === "object" && s.id).slice(0, 12);
+    }
+    const unscoped = JSON.parse(localStorage.getItem(LS_SAVED_SEARCHES) || "[]");
+    if (Array.isArray(unscoped) && unscoped.length > 0) {
+      const migratedScoped = unscoped.filter((s) => s && typeof s === "object" && s.id).slice(0, 12);
+      if (migratedScoped.length > 0) {
+        localStorage.setItem(scopedKey, JSON.stringify(migratedScoped));
+        return migratedScoped;
+      }
     }
     const legacy = JSON.parse(localStorage.getItem(LS_RECENT_SEARCHES_LEGACY) || "[]");
     if (!Array.isArray(legacy) || !legacy.length) return [];
@@ -1866,15 +1817,15 @@ function loadSavedSearches() {
         listedFilter: "",
         savedAt: new Date().toISOString(),
       }));
-    if (migrated.length) localStorage.setItem(LS_SAVED_SEARCHES, JSON.stringify(migrated));
+    if (migrated.length) localStorage.setItem(scopedKey, JSON.stringify(migrated));
     return migrated;
   } catch {
     return [];
   }
 }
 
-function persistSavedSearches(list) {
-  localStorage.setItem(LS_SAVED_SEARCHES, JSON.stringify(list));
+function persistSavedSearches(list, scope = "guest") {
+  localStorage.setItem(savedSearchStorageKey(scope), JSON.stringify(list));
   return list;
 }
 
@@ -1934,8 +1885,8 @@ function buildSavedSearchSnapshot(filters) {
   };
 }
 
-function pushSavedSearch(snapshot) {
-  if (!snapshot) return loadSavedSearches();
+function pushSavedSearch(snapshot, scope = "guest") {
+  if (!snapshot) return loadSavedSearches(scope);
   const sig = (s) =>
     JSON.stringify({
       keyword: s.keyword,
@@ -1948,12 +1899,15 @@ function pushSavedSearch(snapshot) {
       salaryMaxK: s.salaryMaxK,
       listedFilter: s.listedFilter,
     });
-  const prev = loadSavedSearches().filter((s) => sig(s) !== sig(snapshot));
-  return persistSavedSearches([{ ...snapshot, id: snapshot.id || makeSavedSearchId() }, ...prev].slice(0, 12));
+  const prev = loadSavedSearches(scope).filter((s) => sig(s) !== sig(snapshot));
+  return persistSavedSearches(
+    [{ ...snapshot, id: snapshot.id || makeSavedSearchId() }, ...prev].slice(0, 12),
+    scope,
+  );
 }
 
-function removeSavedSearchById(id) {
-  return persistSavedSearches(loadSavedSearches().filter((s) => s.id !== id));
+function removeSavedSearchById(id, scope = "guest") {
+  return persistSavedSearches(loadSavedSearches(scope).filter((s) => s.id !== id), scope);
 }
 
 function describeSavedSearch(search, jobCategories) {
@@ -2147,6 +2101,8 @@ function candidateJobMatchesWhere(j, locationFilter, locationSearchTerms) {
   return single.length >= 2 && blob.includes(single);
 }
 
+const FREE_RECOMMENDATION_LIMIT = 10;
+
 function CandidateHomePage() {
   const { user } = useAuth();
   const location = useLocation();
@@ -2156,6 +2112,11 @@ function CandidateHomePage() {
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [jobsError, setJobsError] = useState("");
   const [recommended, setRecommended] = useState([]);
+  const [recommendationMeta, setRecommendationMeta] = useState({
+    is_limited: false,
+    upgrade_cta: false,
+    total_matches: 0,
+  });
   const [loadingRecs, setLoadingRecs] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -2182,7 +2143,9 @@ function CandidateHomePage() {
   const [listedFilter, setListedFilter] = useState("");
   const [hiddenJobIds, setHiddenJobIds] = useState(() => new Set());
   const [savedJobIds, setSavedJobIds] = useState(() => loadSavedJobIds());
-  const [savedSearches, setSavedSearches] = useState(() => loadSavedSearches());
+  const [savedSearches, setSavedSearches] = useState([]);
+  const [recJobDetails, setRecJobDetails] = useState([]);
+  const premium = isPremiumCandidate(user);
   const showSavedSearchesPanel = location.hash === "#saved-searches";
 
   const appliedJobIds = useMemo(() => new Set(applications.map((a) => a.job)), [applications]);
@@ -2210,12 +2173,52 @@ function CandidateHomePage() {
     setLoadingFeed(true);
     try {
       const feed = await api("/api/jobs/feed", { withAuth: false });
-      setFeedJobs(Array.isArray(feed) ? feed : []);
+      const list = Array.isArray(feed) ? feed : [];
+      setFeedJobs(list);
+      return list;
     } catch {
       setJobsError("Could not load jobs right now. Please try again.");
       setFeedJobs([]);
+      return [];
     } finally {
       setLoadingFeed(false);
+    }
+  }, []);
+
+  const loadRecommendations = useCallback(async (feedList) => {
+    setLoadingRecs(true);
+    try {
+      const recs = await api("/api/recommendations/jobs-for-candidate");
+      const rows = Array.isArray(recs) ? recs : Array.isArray(recs?.results) ? recs.results : [];
+      setRecommended(rows);
+      setRecommendationMeta({
+        is_limited: !!recs?.is_limited,
+        upgrade_cta: !!recs?.upgrade_cta,
+        total_matches: Number(recs?.total_matches) || rows.length,
+      });
+      const feedMap = new Map((feedList || []).map((j) => [j.id, j]));
+      const missingIds = rows.map((r) => r.job_id).filter((id) => !feedMap.has(id));
+      if (!missingIds.length) {
+        setRecJobDetails([]);
+        return;
+      }
+      const extras = await Promise.all(
+        missingIds.slice(0, 40).map(async (id) => {
+          try {
+            const j = await api(`/api/jobs/${id}/`, { withAuth: false });
+            return j?.id ? j : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      setRecJobDetails(extras.filter(Boolean));
+    } catch {
+      setRecommended([]);
+      setRecJobDetails([]);
+      setRecommendationMeta({ is_limited: false, upgrade_cta: false, total_matches: 0 });
+    } finally {
+      setLoadingRecs(false);
     }
   }, []);
 
@@ -2228,13 +2231,17 @@ function CandidateHomePage() {
       } catch {
         if (alive) setJobCategories([]);
       }
+      const feedList = await loadFeed();
+      if (alive) await loadRecommendations(feedList);
       try {
-        const recs = await api("/api/recommendations/jobs-for-candidate");
-        if (alive) setRecommended(Array.isArray(recs) ? recs : []);
+        if (premium) {
+          const savedRows = await api("/api/candidates/saved-searches/");
+          if (alive) setSavedSearches(Array.isArray(savedRows) ? savedRows : []);
+        } else if (alive) {
+          setSavedSearches([]);
+        }
       } catch {
-        if (alive) setRecommended([]);
-      } finally {
-        if (alive) setLoadingRecs(false);
+        if (alive) setSavedSearches([]);
       }
       try {
         const apps = await api("/api/applications/");
@@ -2242,19 +2249,19 @@ function CandidateHomePage() {
       } catch {
         if (alive) setApplications([]);
       }
-      await loadFeed();
     })();
     return () => {
       alive = false;
     };
-  }, [loadFeed]);
+  }, [loadFeed, loadRecommendations, premium]);
 
   const jobById = useMemo(() => {
     const m = new Map();
     for (const j of feedJobs) m.set(j.id, j);
     for (const j of searchResults) m.set(j.id, j);
+    for (const j of recJobDetails) m.set(j.id, j);
     return m;
-  }, [feedJobs, searchResults]);
+  }, [feedJobs, searchResults, recJobDetails]);
 
   const recommendedJobs = useMemo(() => {
     if (!recommended.length) return [];
@@ -2343,9 +2350,20 @@ function CandidateHomePage() {
   const displayJobs = useMemo(() => {
     if (showingSearchResults) return filterJobs(searchResults);
     const rec = filterJobs(recommendedJobs);
-    if (rec.length > 0) return rec;
-    return filterJobs(feedJobs);
-  }, [showingSearchResults, searchResults, recommendedJobs, feedJobs, filterJobs]);
+    if (recommended.length > 0) {
+      const list = premium ? rec : rec.slice(0, FREE_RECOMMENDATION_LIMIT);
+      return list;
+    }
+    const fallback = filterJobs(feedJobs);
+    return premium ? fallback : fallback.slice(0, FREE_RECOMMENDATION_LIMIT);
+  }, [showingSearchResults, searchResults, recommendedJobs, recommended.length, feedJobs, filterJobs, premium]);
+
+  const showRecUpgradeCta =
+    !showingSearchResults &&
+    !premium &&
+    (recommendationMeta.upgrade_cta ||
+      recommendationMeta.total_matches > FREE_RECOMMENDATION_LIMIT ||
+      recommended.length >= FREE_RECOMMENDATION_LIMIT);
 
   useEffect(() => {
     if (!displayJobs.length) {
@@ -2370,7 +2388,12 @@ function CandidateHomePage() {
       overrides.locationSearchTerms !== undefined ? overrides.locationSearchTerms : locationSearchTerms;
     const cat = overrides.categoryFilter !== undefined ? overrides.categoryFilter : categoryFilter;
     const wm = overrides.workModeFilter !== undefined ? overrides.workModeFilter : workModeFilter;
-    if (!q && !loc && !locTerms.length) {
+    const wt = overrides.workTypeFilter !== undefined ? overrides.workTypeFilter : workTypeFilter;
+    const minPay = overrides.salaryMinK !== undefined ? overrides.salaryMinK : salaryMinK;
+    const maxPay = overrides.salaryMaxK !== undefined ? overrides.salaryMaxK : salaryMaxK;
+    const listed = overrides.listedFilter !== undefined ? overrides.listedFilter : listedFilter;
+    const hasAnyQuery = !!(q || loc || locTerms.length || cat || wm || wt || listed || Number(minPay) > 0 || Number(maxPay) < 350);
+    if (!hasAnyQuery) {
       setShowingSearchResults(false);
       setSearchResults([]);
       return;
@@ -2388,20 +2411,29 @@ function CandidateHomePage() {
       setSearchResults(list);
       setShowingSearchResults(true);
       setSelectedJobId(list[0]?.id ?? null);
-      if (saveSnapshot) {
+      if (saveSnapshot && premium) {
         const snapshot = buildSavedSearchSnapshot({
           keyword: q,
           locationFilter: loc,
           locationSearchTerms: locTerms,
           categoryFilter: cat,
           workModeFilter: wm,
-          workTypeFilter:
-            overrides.workTypeFilter !== undefined ? overrides.workTypeFilter : workTypeFilter,
-          salaryMinK: overrides.salaryMinK !== undefined ? overrides.salaryMinK : salaryMinK,
-          salaryMaxK: overrides.salaryMaxK !== undefined ? overrides.salaryMaxK : salaryMaxK,
-          listedFilter: overrides.listedFilter !== undefined ? overrides.listedFilter : listedFilter,
+          workTypeFilter: wt,
+          salaryMinK: minPay,
+          salaryMaxK: maxPay,
+          listedFilter: listed,
         });
-        if (snapshot) setSavedSearches(pushSavedSearch(snapshot));
+        if (snapshot) {
+          try {
+            const created = await api("/api/candidates/saved-searches/", {
+              method: "POST",
+              body: JSON.stringify({ label: snapshot.label, payload: snapshot }),
+            });
+            setSavedSearches((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
+          } catch {
+            // silent failure: search itself already succeeded
+          }
+        }
       }
     } catch (err) {
       setError(String(err.message || err));
@@ -2430,15 +2462,16 @@ function CandidateHomePage() {
   }
 
   function applySavedSearch(search) {
-    const nextKeyword = search.keyword || "";
-    const nextLocation = search.location || "";
-    const nextLocTerms = Array.isArray(search.locationSearchTerms) ? [...search.locationSearchTerms] : [];
-    const nextCategory = search.categoryFilter || "";
-    const nextWorkMode = search.workModeFilter || "";
-    const nextWorkType = search.workTypeFilter || "";
-    const nextSalaryMin = Number(search.salaryMinK) || 0;
-    const nextSalaryMax = Number(search.salaryMaxK) ?? 350;
-    const nextListed = search.listedFilter || "";
+    const payload = search?.payload || search || {};
+    const nextKeyword = payload.keyword || "";
+    const nextLocation = payload.location || "";
+    const nextLocTerms = Array.isArray(payload.locationSearchTerms) ? [...payload.locationSearchTerms] : [];
+    const nextCategory = payload.categoryFilter || "";
+    const nextWorkMode = payload.workModeFilter || "";
+    const nextWorkType = payload.workTypeFilter || "";
+    const nextSalaryMin = Number(payload.salaryMinK) || 0;
+    const nextSalaryMax = Number(payload.salaryMaxK) ?? 350;
+    const nextListed = payload.listedFilter || "";
     setKeyword(nextKeyword);
     setLocationFilter(nextLocation);
     setLocationSearchTerms(nextLocTerms);
@@ -2468,8 +2501,14 @@ function CandidateHomePage() {
     );
   }
 
-  function deleteSavedSearch(id) {
-    setSavedSearches(removeSavedSearchById(id));
+  async function deleteSavedSearch(id) {
+    if (!premium) return;
+    try {
+      await api(`/api/candidates/saved-searches/${id}/`, { method: "DELETE" });
+      setSavedSearches((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      // ignore
+    }
   }
 
   function toggleSavedJob(jobId) {
@@ -2782,7 +2821,19 @@ function CandidateHomePage() {
                 Back to jobs
               </Link>
             </div>
-            {savedSearches.length === 0 ? (
+            {!premium ? (
+              <div className="jobsSeekSavedEmpty">
+                <p>Saved searches are a premium feature.</p>
+                <p className="muted">Upgrade membership to store and re-run searches across sessions.</p>
+                <button
+                  type="button"
+                  className="jobsSeekCta jobsSeekSavedEmptyCta"
+                  onClick={() => navigate("/candidate/settings/membership")}
+                >
+                  Unlock saved searches
+                </button>
+              </div>
+            ) : savedSearches.length === 0 ? (
               <div className="jobsSeekSavedEmpty">
                 <p>No saved searches yet.</p>
                 <p className="muted">Run a search from the bar above — we save your criteria here so you can open it again later.</p>
@@ -2793,11 +2844,12 @@ function CandidateHomePage() {
             ) : (
               <ul className="jobsSeekSavedList">
                 {savedSearches.map((search) => {
-                  const details = describeSavedSearch(search, jobCategories);
+                  const source = search?.payload || search;
+                  const details = describeSavedSearch(source, jobCategories);
                   return (
                     <li key={search.id} className="jobsSeekSavedCard">
                       <div className="jobsSeekSavedCardBody">
-                        <h3 className="jobsSeekSavedCardTitle">{search.label}</h3>
+                        <h3 className="jobsSeekSavedCardTitle">{search.label || source.label}</h3>
                         {details.length > 0 ? (
                           <ul className="jobsSeekSavedCardMeta">
                             {details.map((line) => (
@@ -2805,9 +2857,14 @@ function CandidateHomePage() {
                             ))}
                           </ul>
                         ) : null}
-                        {search.savedAt ? (
+                        {source.savedAt || search.created_at ? (
                           <p className="jobsSeekSavedCardDate muted">
-                            Saved {new Date(search.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            Saved{" "}
+                            {new Date(source.savedAt || search.created_at).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
                           </p>
                         ) : null}
                       </div>
@@ -2843,6 +2900,7 @@ function CandidateHomePage() {
                   ? `${displayJobs.length} search result${displayJobs.length === 1 ? "" : "s"}`
                   : "Best matching roles for you"}
               {!showingSearchResults && loadingRecs ? " · Updating match scores" : ""}
+              {!showingSearchResults && recommendationMeta.is_limited ? " · Showing first 10 (free plan)" : ""}
             </p>
             {showingSearchResults ? (
               <button type="button" className="jobsSeekLinkBtn jobsSeekListClearBtn" onClick={resetBrowse}>
@@ -2971,6 +3029,21 @@ function CandidateHomePage() {
                 </li>
               );
             })}
+            {showRecUpgradeCta ? (
+              <li className="jobsSeekUpgradeCard">
+                <p className="jobsSeekUpgradeTitle">Unlock more recommendations</p>
+                <p className="jobsSeekUpgradeText muted">
+                  Free accounts see your top {FREE_RECOMMENDATION_LIMIT} matches. Premium shows every ranked role for your profile.
+                </p>
+                <button
+                  type="button"
+                  className="jobsSeekCta jobsSeekUpgradeCta"
+                  onClick={() => navigate("/candidate/settings/membership")}
+                >
+                  Upgrade membership
+                </button>
+              </li>
+            ) : null}
           </ul>
         </div>
 
@@ -4909,6 +4982,225 @@ function employerCompanyCompleteness(c) {
   return { pct, filled, total, items };
 }
 
+function CandidateSettingsPage() {
+  const { user } = useAuth();
+  const premium = isPremiumCandidate(user);
+  return (
+    <main className="homePage jobsSeekPage candidateSavedJobsPage">
+      <CandidateMemberHeader />
+      <section className="jobsSeekHero candidateSavedJobsHero" aria-label="Candidate settings">
+        <div className="heroGlow heroGlowA" />
+        <div className="heroGlow heroGlowB" />
+        <div className="heroMesh" />
+        <div className="jobsSeekHeroInner candidateSavedJobsHeroInner">
+          <p className="heroKicker jobsSeekHeroKicker">Settings</p>
+          <h1 className="candidateSavedJobsTitle">Manage account</h1>
+          <p className="candidateSavedJobsLead muted">Membership and resume tools are managed here.</p>
+          <div className="candidateSavedJobsHeroActions">
+            <Link className="jobsSeekCta" to="/candidate/settings/membership">
+              Manage membership
+            </Link>
+            <Link className="jobsSeekLinkBtn candidateSavedJobsHeroSecondary" to="/candidate/settings/resumes">
+              Manage resumes
+            </Link>
+          </div>
+          {!premium ? (
+            <p className="muted">Premium unlocks unlimited recommendations, resumes, and saved searches.</p>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function CandidateMembershipPage() {
+  const { user, refreshMe } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [membership, setMembership] = useState(null);
+
+  const premiumActive =
+    membership?.plan_type === "premium" && membership?.status === "active";
+  const premiumCancelled =
+    membership?.plan_type === "premium" && membership?.status === "cancelled";
+
+  const loadMembership = useCallback(async () => {
+    try {
+      const row = await api("/api/auth/membership");
+      setMembership(row);
+    } catch (e) {
+      setError(formatApiError(e) || "Could not load membership.");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMembership();
+  }, [loadMembership, user?.membership?.status, user?.membership?.plan_type]);
+
+  async function runAction(path, successMessage, redirectHome = false) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await api(path, { method: "POST" });
+      setMembership(updated);
+      await refreshMe();
+      setMessage(successMessage);
+      if (redirectHome) {
+        navigate("/", { replace: true });
+      }
+    } catch (e) {
+      setError(formatApiError(e) || "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const memberSinceLabel = membership?.member_since
+    ? new Date(membership.member_since).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
+  return (
+    <main className="homePage jobsSeekPage candidateMembershipPage">
+      <CandidateMemberHeader />
+      <section className="candidateMembershipHero" aria-label="Membership">
+        <div className="heroGlow heroGlowA" />
+        <div className="heroGlow heroGlowB" />
+        <div className="heroMesh" />
+        <div className="candidateMembershipHeroInner">
+          <Link className="jobsSeekLinkBtn candidateMembershipBack" to="/candidate/settings">
+            ← Settings
+          </Link>
+          <p className="heroKicker jobsSeekHeroKicker">Premium</p>
+          <h1 className="candidateMembershipTitle">Manage membership</h1>
+          <p className="candidateMembershipLead muted">
+            MVP billing — no card required. Upgrade instantly to unlock the full candidate experience.
+          </p>
+        </div>
+      </section>
+
+      <div className="candidateMembershipBody">
+        {message ? <p className="success candidateMembershipFlash">{message}</p> : null}
+        {error ? <p className="error candidateMembershipFlash">{error}</p> : null}
+
+        <div className="candidateMembershipGrid">
+          <article className={`candidateMembershipPlanCard ${premiumActive ? "candidateMembershipPlanCardActive" : ""}`}>
+            <div className="candidateMembershipPlanHead">
+              <span className="candidateMembershipPlanBadge">SkillMesh Premium</span>
+              <p className="candidateMembershipPrice">
+                <span className="candidateMembershipPriceAmount">$5.99</span>
+                <span className="candidateMembershipPricePeriod">/ month</span>
+              </p>
+            </div>
+            <ul className="candidateMembershipBenefits">
+              <li>Unlimited personalized job recommendations</li>
+              <li>Saved searches synced to your account</li>
+              <li>Unlimited labeled resumes in settings</li>
+              <li>Premium badge on your SkillMesh header</li>
+            </ul>
+
+            {premiumActive ? (
+              <div className="candidateMembershipActivePanel">
+                <p className="candidateMembershipStatusLine">
+                  <span className="candidateMembershipStatusDot" aria-hidden="true" />
+                  Active member
+                </p>
+                {memberSinceLabel ? (
+                  <p className="candidateMembershipSince muted">Member since {memberSinceLabel}</p>
+                ) : null}
+                <button
+                  type="button"
+                  className="candidateMembershipCancelBtn"
+                  disabled={busy}
+                  onClick={() => runAction("/api/auth/membership/cancel", "Membership cancelled.")}
+                >
+                  {busy ? "Updating…" : "Cancel membership"}
+                </button>
+              </div>
+            ) : (
+              <div className="candidateMembershipCtaPanel">
+                {premiumCancelled ? (
+                  <p className="candidateMembershipSince muted">
+                    Your premium access ended
+                    {membership?.cancelled_at
+                      ? ` on ${new Date(membership.cancelled_at).toLocaleDateString()}`
+                      : ""}
+                    .
+                  </p>
+                ) : (
+                  <p className="muted">You are on the free plan — top {FREE_RECOMMENDATION_LIMIT} recommendations only.</p>
+                )}
+                <button
+                  type="button"
+                  className="jobsSeekCta candidateMembershipObtainBtn"
+                  disabled={busy}
+                  onClick={() =>
+                    runAction(
+                      premiumCancelled ? "/api/auth/membership/renew" : "/api/auth/membership/obtain",
+                      "Welcome to Premium! Redirecting to your job matches…",
+                      true,
+                    )
+                  }
+                >
+                  {busy ? "Activating…" : premiumCancelled ? "Renew membership" : "Obtain membership"}
+                </button>
+              </div>
+            )}
+          </article>
+
+          <aside className="candidateMembershipAside card">
+            <h2 className="candidateMembershipAsideTitle">What changes after upgrade?</h2>
+            <p className="muted">
+              Your job board reloads with every ranked match for your profile. Scroll through all recommendations, save
+              searches, and manage multiple resumes from settings.
+            </p>
+            <Link className="jobsSeekLinkBtn" to="/">
+              Back to job listings
+            </Link>
+          </aside>
+        </div>
+      </div>
+
+      <footer className="jobsSeekFooter">© {new Date().getFullYear()} SkillMesh</footer>
+    </main>
+  );
+}
+
+function CandidateResumeSettingsPage() {
+  const premium = isPremiumCandidate(useAuth().user);
+  return (
+    <main className="homePage jobsSeekPage candidateSavedJobsPage">
+      <CandidateMemberHeader />
+      <div className="candidateSavedJobsBody">
+        <article className="candidateDashCard">
+          <h1 className="candidateDashCardTitle">Manage resumes</h1>
+          {premium ? (
+            <>
+              <p className="muted">Premium enabled. Upload and label unlimited resumes from your profile dashboard.</p>
+              <Link className="jobsSeekCta" to="/candidate">
+                Open profile resumes
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="muted">Manage resumes is a premium feature. Free plan stores your latest resume only.</p>
+              <Link className="jobsSeekCta" to="/candidate/settings/membership">
+                Upgrade to Premium
+              </Link>
+            </>
+          )}
+        </article>
+      </div>
+    </main>
+  );
+}
+
 function EmployerDashboard() {
   const [companyProfile, setCompanyProfile] = useState({
     ...EMPTY_EMPLOYER_COMPANY,
@@ -5399,7 +5691,7 @@ function Home() {
       <main className="homePage">
         <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
           <div className="homeHeaderLead">
-            <Link to="/" className="homeHeaderBrand">
+            <Link to={getRoleHomePath(user)} className="homeHeaderBrand">
               <img className="homeHeaderLogo" src={ldLogo} alt="" />
               <span className="homeHeaderWordmark">SkillMesh</span>
             </Link>
@@ -5619,7 +5911,7 @@ function Home() {
     <div className="card employerHomeCard">
       <div className="employerHomeTop">
         <div className="homeHeaderLead">
-          <Link to="/" className="homeHeaderBrand employerHomeBrandLink">
+          <Link to={getRoleHomePath(user)} className="homeHeaderBrand employerHomeBrandLink">
             <img className="homeHeaderLogo" src={ldLogo} alt="" />
             <span className="homeHeaderWordmark">SkillMesh</span>
           </Link>
@@ -5687,6 +5979,30 @@ export default function App() {
         }
       />
       <Route
+        path="/candidate/settings"
+        element={
+          <CandidateOnboardingRoute page="dashboard">
+            <CandidateSettingsPage />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/candidate/settings/membership"
+        element={
+          <CandidateOnboardingRoute page="dashboard">
+            <CandidateMembershipPage />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/candidate/settings/resumes"
+        element={
+          <CandidateOnboardingRoute page="dashboard">
+            <CandidateResumeSettingsPage />
+          </CandidateOnboardingRoute>
+        }
+      />
+      <Route
         path="/employer/onboarding/company"
         element={
           <Protected roles={["employer"]}>
@@ -5720,6 +6036,16 @@ export default function App() {
           <Protected roles={["employer"]}>
             <EmployerOnboardingGuard>
               <EmployerApplicationsPage />
+            </EmployerOnboardingGuard>
+          </Protected>
+        }
+      />
+      <Route
+        path="/employer/support"
+        element={
+          <Protected roles={["employer"]}>
+            <EmployerOnboardingGuard>
+              <EmployerSupportPage />
             </EmployerOnboardingGuard>
           </Protected>
         }

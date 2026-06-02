@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework import status
+from rest_framework.test import APITestCase
 
+from accounts.models import CandidateMembership
 from candidates.models import CandidateProfile, CandidateSkill
 from employers.models import JobCategory, JobPosting, JobSkill
 from matching.services import recommend_jobs_for_candidate
@@ -78,3 +81,45 @@ class MatchingServiceTests(TestCase):
             self.assertGreaterEqual(r["score"], floor - 0.02)
         if len(results) > len(high):
             self.assertLess(min(r["score"] for r in results), floor - 0.01)
+
+
+class MatchingMembershipApiTests(APITestCase):
+    def setUp(self):
+        self.candidate_user = User.objects.create_user(
+            email="candapi@example.com", username="candapi", password="pass12345", role="candidate"
+        )
+        self.employer_user = User.objects.create_user(
+            email="empapi@example.com", username="empapi", password="pass12345", role="employer"
+        )
+        candidate = CandidateProfile.objects.create(user=self.candidate_user, full_name="Cand Api", preferred_mode="remote")
+        CandidateSkill.objects.create(candidate=candidate, skill_name="python", level=3)
+        cat = JobCategory.objects.create(slug="api-dev", name="Software API", sort_order=2)
+        for i in range(12):
+            job = JobPosting.objects.create(
+                employer=self.employer_user,
+                job_category=cat,
+                title=f"Python Engineer {i}",
+                jd_text="Python backend django rest",
+                required_experience=1,
+                work_mode="remote",
+                status="open",
+            )
+            JobSkill.objects.create(job=job, skill_name="python", weight=3)
+        self.client.force_authenticate(user=self.candidate_user)
+
+    def test_free_plan_is_limited_to_ten_results(self):
+        res = self.client.get("/api/recommendations/jobs-for-candidate")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["is_limited"])
+        self.assertEqual(len(res.data["results"]), 10)
+
+    def test_premium_plan_gets_full_recommendation_list(self):
+        CandidateMembership.objects.create(
+            user=self.candidate_user,
+            plan_type=CandidateMembership.PlanType.PREMIUM,
+            status=CandidateMembership.Status.ACTIVE,
+        )
+        res = self.client.get("/api/recommendations/jobs-for-candidate")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.data["is_limited"])
+        self.assertGreaterEqual(len(res.data["results"]), 11)

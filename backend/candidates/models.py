@@ -83,3 +83,14 @@ class ResumeDocument(models.Model):
     parsed_json = models.JSONField(default=dict, blank=True)
     parsed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CandidateSavedSearch(models.Model):
+    candidate = models.ForeignKey(CandidateProfile, on_delete=models.CASCADE, related_name="saved_searches")
+    label = models.CharField(max_length=120)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]

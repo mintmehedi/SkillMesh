@@ -1,7 +1,20 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { api, clearTokens, setTokens } from "./api";
+import { api } from "./api";
 
 const AuthContext = createContext(null);
+
+export function getRoleHomePath(user) {
+  if (user?.role === "employer") return "/employer";
+  return "/";
+}
+
+export function isPremiumCandidate(user) {
+  return (
+    user?.role === "candidate" &&
+    user?.membership?.plan_type === "premium" &&
+    user?.membership?.status === "active"
+  );
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -12,7 +25,6 @@ export function AuthProvider({ children }) {
       const me = await api("/api/auth/me");
       setUser(me);
     } catch {
-      clearTokens();
       setUser(null);
     } finally {
       setLoading(false);
@@ -24,18 +36,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(email, password) {
-    const data = await api("/api/auth/login", {
+    await api("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
       withAuth: false,
     });
-    setTokens(data.access, data.refresh);
     await refreshMe();
   }
 
   async function register(payload) {
     if (payload.role === "candidate") {
-      const data = await api("/api/auth/register/candidate", {
+      await api("/api/auth/register/candidate", {
         method: "POST",
         body: JSON.stringify({
           email: payload.email,
@@ -52,7 +63,6 @@ export function AuthProvider({ children }) {
         }),
         withAuth: false,
       });
-      setTokens(data.access, data.refresh);
       await refreshMe();
       return;
     }
@@ -75,8 +85,18 @@ export function AuthProvider({ children }) {
     await login(payload.email, payload.password);
   }
 
-  function logout() {
-    clearTokens();
+  async function logout() {
+    try {
+      await api("/api/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({}),
+        credentials: "include",
+        withAuth: false,
+        _skipAuthRefresh: true,
+      });
+    } catch {
+      /* session cleared via cookie expiry on server when possible */
+    }
     setUser(null);
   }
 
