@@ -2632,6 +2632,185 @@ a.candidateProfileMenuItem {
   max-width: 920px;
 }
 
+.employerDashLayoutWide {
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  max-width: 1120px;
+  gap: 1.25rem 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .employerDashLayoutWide {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashAside .candidateDashCard {
+  position: sticky;
+  top: 1rem;
+}
+
+.employerDashStatStripTitle {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerDashStatStripList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.employerDashStatStripList li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.employerDashStatStripValue {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #3730a3;
+  line-height: 1.1;
+}
+
+.employerDashStatStripLabel {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.employerDashStatStripHint {
+  margin: 0.85rem 0 0;
+}
+
+.employerDashSearchForm {
+  margin-top: 0.35rem;
+}
+
+.employerDashTalentGridWide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .employerDashTalentGridWide {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employerDashSearchActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-top: 0.85rem;
+}
+
+.employerDashSearchActions .employerDashTalentSearchBtn {
+  margin-top: 0;
+  width: auto;
+  min-width: 180px;
+}
+
+.employerDashResultsBody {
+  margin-top: 0.75rem;
+}
+
+.employerDashCandidateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.employerDashCandidateCard {
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.employerDashCandidateHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.employerDashCandidateName {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employerDashCandidateHeadline {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.employerDashCandidateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.employerDashCandidateMode {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+}
+
+.employerDashCandidateRole,
+.employerDashCandidateEdu,
+.employerDashCandidateCats {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
+.employerDashCandidateSummary {
+  margin: 0.5rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.employerDashSkillChips {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.employerDashSkillChips li {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
+.employerDashMatchSub {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
 .employerDashPageLoading {
   text-align: center;
   margin: 2rem auto;
