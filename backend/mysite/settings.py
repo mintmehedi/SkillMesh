@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -105,6 +106,12 @@ if not DATABASE_URL:
             "Set DATABASE_URL or SUPABASE_DB_URI in backend/.env (PostgreSQL connection URI from Supabase)."
         )
 
+_running_tests = "test" in sys.argv
+if _running_tests:
+    test_db_url = (os.environ.get("TEST_DATABASE_URL") or "").strip().strip('"').strip("'")
+    if test_db_url:
+        DATABASE_URL = test_db_url
+
 is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
 try:
     DATABASES = {
@@ -112,6 +119,9 @@ try:
             DATABASE_URL, conn_max_age=600, ssl_require=is_postgres
         ),
     }
+    DATABASES["default"]["ENGINE"] = "mysite.db_backends.postgresql"
+    if _running_tests:
+        DATABASES["default"]["CONN_MAX_AGE"] = 0
 except dj_database_url.ParseError as exc:
     raise RuntimeError(
         "DATABASE_URL is not a valid PostgreSQL URI. Common causes: (1) The literal "
@@ -120,6 +130,8 @@ except dj_database_url.ParseError as exc:
         "spaces must be URL-encoded (e.g. @ → %40). "
         "Supabase: Project Settings → Database → Connection string (URI)."
     ) from exc
+
+TEST_RUNNER = "mysite.test_runner.SkillMeshDiscoverRunner"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
