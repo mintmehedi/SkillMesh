@@ -27,6 +27,7 @@ from .serializers import (
     CandidateSavedSearchSerializer,
     WorkExperienceSerializer,
 )
+from .candidate_search import employer_candidate_search_queryset, filter_candidate_queryset
 from .skill_suggestions import suggest_skill_names
 
 logger = logging.getLogger(__name__)
@@ -136,26 +137,20 @@ class CandidateProfileUpsertView(generics.GenericAPIView):
 class CandidateListView(generics.ListAPIView):
     serializer_class = CandidateSearchResultSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmployer]
-    queryset = CandidateProfile.objects.all().order_by("-id")
+
+    def get_queryset(self):
+        return employer_candidate_search_queryset().order_by("-id")
 
 
 class CandidateSearchView(generics.ListAPIView):
+    """Keyword and optional skill/education/location/category/mode filters over candidate profiles."""
+
     serializer_class = CandidateSearchResultSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmployer]
 
     def get_queryset(self):
-        qs = CandidateProfile.objects.all()
-        skill = self.request.query_params.get("skills")
-        education = self.request.query_params.get("education")
-        location = self.request.query_params.get("location")
-
-        if skill:
-            qs = qs.filter(skills__skill_name__icontains=skill)
-        if education:
-            qs = qs.filter(education_level__icontains=education)
-        if location:
-            qs = qs.filter(location__icontains=location)
-        return qs.distinct().order_by("-id")
+        qs = employer_candidate_search_queryset()
+        return filter_candidate_queryset(qs, self.request)
 
 
 class JobCategoryListView(generics.ListAPIView):

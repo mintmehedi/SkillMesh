@@ -191,8 +191,18 @@ def recommend_candidates_for_job(job_id, top_n=10):
     if not job:
         return []
     ranked = []
-    for candidate in CandidateProfile.objects.all():
+    for candidate in CandidateProfile.objects.prefetch_related(
+        "skills", "work_experiences", "education_entries", "preferred_job_categories"
+    ):
         score, explanation = score_candidate_for_job(candidate, job)
-        ranked.append({"candidate_id": candidate.pk, "score": score, "explanation": explanation})
+        ranked.append(
+            {
+                "candidate_id": candidate.pk,
+                "full_name": candidate.full_name,
+                "headline": candidate.headline or "",
+                "score": score,
+                "explanation": explanation,
+            }
+        )
     ranked.sort(key=lambda x: x["score"], reverse=True)
     return ranked[:top_n]
