@@ -4968,6 +4968,52 @@ function EmployerCompanyProfilePage({ variant = "onboarding" }) {
   );
 }
 
+const EMPTY_CANDIDATE_SEARCH_FILTERS = {
+  keyword: "",
+  skills: "",
+  education: "",
+  location: "",
+  category: "",
+  preferred_mode: "",
+};
+
+function buildCandidateSearchParams(filters) {
+  const params = new URLSearchParams();
+  for (const [key, val] of [
+    ["keyword", filters.keyword],
+    ["skills", filters.skills],
+    ["education", filters.education],
+    ["location", filters.location],
+    ["category", filters.category],
+    ["preferred_mode", filters.preferred_mode],
+  ]) {
+    const v = String(val || "").trim();
+    if (v) params.set(key, v);
+  }
+  return params;
+}
+
+function candidatePrimaryRole(c) {
+  const exps = c?.work_experiences;
+  if (!Array.isArray(exps) || exps.length === 0) return "";
+  const sorted = [...exps].sort(
+    (a, b) => Number(b.is_current) - Number(a.is_current) || (b.sort_order || 0) - (a.sort_order || 0),
+  );
+  const top = sorted[0];
+  const title = (top?.job_title || "").trim();
+  const company = (top?.company_name || "").trim();
+  if (title && company) return `${title} at ${company}`;
+  return title || company || "";
+}
+
+function candidateSkillPreview(c, limit = 6) {
+  if (!Array.isArray(c?.skills)) return [];
+  return c.skills
+    .map((s) => (s.skill_name || "").trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
 function employerCompanyCompleteness(c) {
   const b = c && typeof c === "object" ? c : {};
   const items = [
@@ -5212,12 +5258,9 @@ function EmployerDashboard() {
     ...EMPTY_EMPLOYER_COMPANY,
   });
   const [jobs, setJobs] = useState([]);
+  const [jobCategories, setJobCategories] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
-  const [candidateFilters, setCandidateFilters] = useState({
-    skills: "",
-    education: "",
-    location: "",
-  });
+  const [candidateFilters, setCandidateFilters] = useState({ ...EMPTY_CANDIDATE_SEARCH_FILTERS });
   const [recs, setRecs] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [status, setStatus] = useState("");
@@ -5228,6 +5271,11 @@ function EmployerDashboard() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [recAttempted, setRecAttempted] = useState(false);
   const [resultsTab, setResultsTab] = useState("search");
+
+  const hasActiveFilters = useMemo(
+    () => Object.values(candidateFilters).some((v) => String(v || "").trim()),
+    [candidateFilters],
+  );
 
   const jobStats = useMemo(() => {
     const list = jobs || [];
@@ -5274,8 +5322,14 @@ function EmployerDashboard() {
         } catch {
           /* no profile */
         }
-        const myJobs = await api("/api/employers/jobs");
-        if (!cancelled) setJobs(Array.isArray(myJobs) ? myJobs : []);
+        const [myJobs, cats] = await Promise.all([
+          api("/api/employers/jobs"),
+          api("/api/candidates/job-categories/", { withAuth: false }).catch(() => []),
+        ]);
+        if (!cancelled) {
+          setJobs(Array.isArray(myJobs) ? myJobs : []);
+          setJobCategories(Array.isArray(cats) ? cats : []);
+        }
       } catch {
         if (!cancelled) setError("Could not load dashboard data.");
       } finally {
@@ -5287,13 +5341,21 @@ function EmployerDashboard() {
     };
   }, []);
 
+  function clearCandidateFilters() {
+    setCandidateFilters({ ...EMPTY_CANDIDATE_SEARCH_FILTERS });
+    setCandidates([]);
+    setSearchAttempted(false);
+    setStatus("");
+    setError("");
+  }
+
   async function searchCandidates() {
     setError("");
     setStatus("");
     setSearchBusy(true);
     try {
-      const q = new URLSearchParams(candidateFilters).toString();
-      const res = await api(`/api/candidates/search?${q}`);
+      const q = buildCandidateSearchParams(candidateFilters).toString();
+      const res = await api(`/api/candidates/search${q ? `?${q}` : ""}`);
       const list = Array.isArray(res) ? res : [];
       setCandidates(list);
       setSearchAttempted(true);
@@ -5377,7 +5439,35 @@ function EmployerDashboard() {
       {dashLoading ? (
         <p className="muted employerDashPageLoading">Loading…</p>
       ) : (
-        <div className="candidateDashLayout candidateDashLayoutWide">
+        <div className="candidateDashLayout employerDashLayoutWide">
+          <aside className="candidateDashAside employerDashAside" aria-label="Workspace summary">
+            <section className="candidateDashCard candidateDashCardCompact employerDashStatStrip">
+              <h2 className="employerDashStatStripTitle">At a glance</h2>
+              <ul className="employerDashStatStripList">
+                <li>
+                  <span className="employerDashStatStripValue">{jobStats.open}</span>
+                  <span className="employerDashStatStripLabel">Open jobs</span>
+                </li>
+                <li>
+                  <span className="employerDashStatStripValue">{jobStats.total}</span>
+                  <span className="employerDashStatStripLabel">Total listings</span>
+                </li>
+                <li>
+                  <span className="employerDashStatStripValue">{profileStrength.pct}%</span>
+                  <span className="employerDashStatStripLabel">Company profile</span>
+                </li>
+              </ul>
+              {profileStrength.pct < 100 ? (
+                <p className="candidateDashCardHint employerDashStatStripHint">
+                  <Link to="/employer/company" className="employerDashInlineLink">
+                    Complete your profile
+                  </Link>{" "}
+                  to attract stronger applicants.
+                </p>
+              ) : null}
+            </section>
+          </aside>
+
           <div className="candidateDashMain">
             <section className="candidateDashCard candidateDashCardCompact" aria-labelledby="employer-dash-recent-heading">
               <div className="candidateDashCardHead">
@@ -5421,54 +5511,121 @@ function EmployerDashboard() {
               <h2 id="employer-dash-talent-heading" className="candidateDashCardTitle">
                 Find talent
               </h2>
-              <p className="candidateDashCardHint">Search the directory or rank candidates against a job you posted.</p>
+              <p className="candidateDashCardHint">
+                Search names, skills, experience, education, and preferred categories. Combine filters to narrow results.
+              </p>
 
-              <div className="employerDashTalentGrid">
-                <div className="employerDashField">
-                  <label className="employerDashLabel" htmlFor="dash-filter-skill">
-                    Skill
-                  </label>
-                  <input
-                    id="dash-filter-skill"
-                    className="authInput"
-                    placeholder="Keyword"
-                    value={candidateFilters.skills}
-                    onChange={(e) => setCandidateFilters({ ...candidateFilters, skills: e.target.value })}
-                  />
-                </div>
-                <div className="employerDashField">
-                  <label className="employerDashLabel" htmlFor="dash-filter-edu">
-                    Education
-                  </label>
-                  <input
-                    id="dash-filter-edu"
-                    className="authInput"
-                    placeholder="Keyword"
-                    value={candidateFilters.education}
-                    onChange={(e) => setCandidateFilters({ ...candidateFilters, education: e.target.value })}
-                  />
-                </div>
-                <div className="employerDashField">
-                  <label className="employerDashLabel" htmlFor="dash-filter-loc">
-                    Location
-                  </label>
-                  <input
-                    id="dash-filter-loc"
-                    className="authInput"
-                    placeholder="Keyword"
-                    value={candidateFilters.location}
-                    onChange={(e) => setCandidateFilters({ ...candidateFilters, location: e.target.value })}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                className="modernBtn employerDashTalentSearchBtn"
-                disabled={searchBusy}
-                onClick={searchCandidates}
+              <form
+                className="employerDashSearchForm"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  searchCandidates();
+                }}
               >
-                {searchBusy ? "Searching…" : "Search directory"}
-              </button>
+                <div className="employerDashField employerDashFieldFull">
+                  <label className="employerDashLabel" htmlFor="dash-filter-keyword">
+                    Keywords
+                  </label>
+                  <input
+                    id="dash-filter-keyword"
+                    className="authInput"
+                    placeholder="e.g. registered nurse, Python, project manager"
+                    value={candidateFilters.keyword}
+                    onChange={(e) => setCandidateFilters({ ...candidateFilters, keyword: e.target.value })}
+                  />
+                </div>
+
+                <div className="employerDashTalentGrid employerDashTalentGridWide">
+                  <div className="employerDashField">
+                    <label className="employerDashLabel" htmlFor="dash-filter-skill">
+                      Skill
+                    </label>
+                    <input
+                      id="dash-filter-skill"
+                      className="authInput"
+                      placeholder="Specific skill"
+                      value={candidateFilters.skills}
+                      onChange={(e) => setCandidateFilters({ ...candidateFilters, skills: e.target.value })}
+                    />
+                  </div>
+                  <div className="employerDashField">
+                    <label className="employerDashLabel" htmlFor="dash-filter-edu">
+                      Education
+                    </label>
+                    <input
+                      id="dash-filter-edu"
+                      className="authInput"
+                      placeholder="Degree, major, or school"
+                      value={candidateFilters.education}
+                      onChange={(e) => setCandidateFilters({ ...candidateFilters, education: e.target.value })}
+                    />
+                  </div>
+                  <div className="employerDashField">
+                    <label className="employerDashLabel" htmlFor="dash-filter-loc">
+                      Location
+                    </label>
+                    <input
+                      id="dash-filter-loc"
+                      className="authInput"
+                      placeholder="City, state, or postcode"
+                      value={candidateFilters.location}
+                      onChange={(e) => setCandidateFilters({ ...candidateFilters, location: e.target.value })}
+                    />
+                  </div>
+                  <div className="employerDashField">
+                    <label className="employerDashLabel" htmlFor="dash-filter-category">
+                      Preferred category
+                    </label>
+                    <div className="authSelectWrap">
+                      <select
+                        id="dash-filter-category"
+                        className="authInput authSelect"
+                        value={candidateFilters.category}
+                        onChange={(e) => setCandidateFilters({ ...candidateFilters, category: e.target.value })}
+                      >
+                        <option value="">Any category</option>
+                        {jobCategories.map((cat) => (
+                          <option key={cat.id} value={String(cat.id)}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="employerDashField">
+                    <label className="employerDashLabel" htmlFor="dash-filter-mode">
+                      Work mode preference
+                    </label>
+                    <div className="authSelectWrap">
+                      <select
+                        id="dash-filter-mode"
+                        className="authInput authSelect"
+                        value={candidateFilters.preferred_mode}
+                        onChange={(e) => setCandidateFilters({ ...candidateFilters, preferred_mode: e.target.value })}
+                      >
+                        <option value="">Any mode</option>
+                        <option value="remote">Remote</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="onsite">On-site</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="employerDashSearchActions">
+                  <button type="submit" className="modernBtn employerDashTalentSearchBtn" disabled={searchBusy}>
+                    {searchBusy ? "Searching…" : "Search directory"}
+                  </button>
+                  <button
+                    type="button"
+                    className="employerDashBtn employerDashBtnGhost"
+                    disabled={searchBusy || !hasActiveFilters}
+                    onClick={clearCandidateFilters}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              </form>
 
               <div className="employerDashTalentDivider" />
 
@@ -5541,39 +5698,73 @@ function EmployerDashboard() {
               </div>
 
               {resultsTab === "search" ? (
-                <div className="employerDashTableScroll">
+                <div className="employerDashResultsBody">
                   {candidates.length === 0 ? (
                     <div className="employerDashTableEmpty">
                       <p className="employerDashTableEmptyTitle">
                         {searchAttempted ? "No matching candidates" : "Run a search"}
                       </p>
                       <p className="employerDashTableEmptyText">
-                        {searchAttempted ? "Try broader keywords or fewer filters." : "Use the fields above, then Search directory."}
+                        {searchAttempted
+                          ? "Try broader keywords, fewer filters, or search experience titles in Keywords."
+                          : "Use keywords or filters above, then Search directory. Leave filters empty to browse everyone."}
                       </p>
                     </div>
                   ) : (
-                    <table className="employerDashTable">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Name</th>
-                          <th>Headline</th>
-                          <th>Education</th>
-                          <th>Location</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {candidates.map((c) => (
-                          <tr key={c.id}>
-                            <td>{c.id}</td>
-                            <td className="employerDashTdStrong">{c.full_name}</td>
-                            <td>{c.headline || c.major || "—"}</td>
-                            <td>{c.education_level || "—"}</td>
-                            <td>{c.location || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <ul className="employerDashCandidateList">
+                      {candidates.map((c) => {
+                        const skills = candidateSkillPreview(c);
+                        const roleLine = candidatePrimaryRole(c);
+                        const cats = Array.isArray(c.preferred_job_categories)
+                          ? c.preferred_job_categories.map((x) => x.name).filter(Boolean)
+                          : [];
+                        return (
+                          <li key={c.id} className="employerDashCandidateCard">
+                            <div className="employerDashCandidateHead">
+                              <div>
+                                <h3 className="employerDashCandidateName">{c.full_name}</h3>
+                                <p className="employerDashCandidateHeadline">
+                                  {(c.headline || "").trim() || roleLine || "—"}
+                                </p>
+                              </div>
+                              <div className="employerDashCandidateMeta">
+                                {c.location ? <span>{c.location}</span> : null}
+                                {c.preferred_mode ? (
+                                  <span className="employerDashCandidateMode">
+                                    {formatWorkModeLabel(c.preferred_mode)}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            {roleLine && (c.headline || "").trim() ? (
+                              <p className="employerDashCandidateRole muted">{roleLine}</p>
+                            ) : null}
+                            {(c.education_level || c.major) && (
+                              <p className="employerDashCandidateEdu muted">
+                                {[c.education_level, c.major].filter(Boolean).join(" · ")}
+                              </p>
+                            )}
+                            {c.summary ? (
+                              <p className="employerDashCandidateSummary">
+                                {c.summary.length > 160 ? `${c.summary.slice(0, 160)}…` : c.summary}
+                              </p>
+                            ) : null}
+                            {skills.length > 0 ? (
+                              <ul className="employerDashSkillChips" aria-label="Skills">
+                                {skills.map((s) => (
+                                  <li key={s}>{s}</li>
+                                ))}
+                              </ul>
+                            ) : null}
+                            {cats.length > 0 ? (
+                              <p className="employerDashCandidateCats muted">
+                                Interested in: {cats.join(", ")}
+                              </p>
+                            ) : null}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </div>
               ) : (
@@ -5602,7 +5793,12 @@ function EmployerDashboard() {
                       <tbody>
                         {recs.map((r) => (
                           <tr key={r.candidate_id}>
-                            <td className="employerDashTdStrong">{r.candidate_id}</td>
+                            <td className="employerDashTdStrong">
+                              {(r.full_name || "").trim() || `Candidate #${r.candidate_id}`}
+                              {r.headline ? (
+                                <span className="employerDashMatchSub muted"> {r.headline}</span>
+                              ) : null}
+                            </td>
                             <td>
                               {matchScorePercent(r.score) != null ? `${matchScorePercent(r.score)}%` : r.score ?? "—"}
                             </td>
