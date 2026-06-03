@@ -144,7 +144,9 @@ export function EmployerHomePage() {
               📊
             </span>
             <h3 className="employerLandingCardTitle">Employer dashboard</h3>
-            <p className="employerLandingCardText">Overview, candidate search, and job-to-candidate recommendations.</p>
+            <p className="employerLandingCardText">
+              Search candidates by skills, experience, education, and location — or get ranked matches for each job.
+            </p>
             <span className="employerLandingCardCta">Open dashboard →</span>
           </Link>
           <Link className="employerLandingCard" to="/employer/jobs">
