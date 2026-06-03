@@ -746,18 +746,24 @@ function RegisterPage() {
                 },
               }}
             />
-            <input
-              id="reg-cand-mobile"
-              className={fieldErrors.mobile_number ? "authInput authInputHasError" : "authInput"}
-              placeholder="Mobile number"
-              value={form.mobile_number}
-              aria-invalid={!!fieldErrors.mobile_number}
-              aria-describedby={fieldErrors.mobile_number ? "reg-cand-mobile-err" : undefined}
-              onChange={(e) => {
-                clearRegisterFieldErr("mobile_number");
-                setForm({ ...form, mobile_number: e.target.value });
-              }}
-            />
+            <div className="registerMobileField">
+              <input
+                id="reg-cand-mobile"
+                className={
+                  fieldErrors.mobile_number
+                    ? "authInput registerMobileInput authInputHasError"
+                    : "authInput registerMobileInput"
+                }
+                placeholder="Mobile number"
+                value={form.mobile_number}
+                aria-invalid={!!fieldErrors.mobile_number}
+                aria-describedby={fieldErrors.mobile_number ? "reg-cand-mobile-err" : undefined}
+                onChange={(e) => {
+                  clearRegisterFieldErr("mobile_number");
+                  setForm({ ...form, mobile_number: e.target.value });
+                }}
+              />
+            </div>
           </div>
           {fieldErrors.mobile_number ? (
             <p className="fieldErrorHint" id="reg-cand-mobile-err" role="alert">

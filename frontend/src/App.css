@@ -1651,6 +1651,32 @@ select.authSelect.authInputHasError {
   font-weight: 700;
 }
 
+.dobSelectField {
+  width: 100%;
+  min-width: 0;
+}
+
+.dobSelectLabel {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.dobSelectRow {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 0.85fr) minmax(0, 1.35fr) minmax(5.5rem, 1fr);
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.dobSelectHint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
 .dobPicker {
   width: 100%;
   min-width: 0;
@@ -2163,7 +2189,20 @@ button:hover {
 }
 
 .registerDobGrid {
-  align-items: stretch;
+  align-items: end;
+  grid-template-columns: minmax(0, 1.65fr) minmax(9.5rem, 0.95fr);
+}
+
+.registerMobileField {
+  min-width: 0;
+  width: 100%;
+}
+
+.registerMobileInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  margin: 0;
 }
 
 .chipWrap {
