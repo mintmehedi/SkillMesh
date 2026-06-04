@@ -15,6 +15,19 @@ export function setTokens() {}
 /** @deprecated */
 export function clearTokens() {}
 
+/** Turn HTML error pages (e.g. Django 500) into a short message for the UI. */
+export function formatApiError(text, status = 0) {
+  const raw = String(text || "").trim();
+  if (!raw) return "Request failed";
+  if (raw.startsWith("<!") || raw.includes("<html")) {
+    if (status >= 500) {
+      return "Server error while saving. Please try again in a moment.";
+    }
+    return "Something went wrong. Please try again.";
+  }
+  return raw;
+}
+
 async function refreshAccessToken() {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
@@ -60,7 +73,7 @@ export async function api(path, options = {}) {
   }
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "Request failed");
+    throw new Error(formatApiError(text, response.status));
   }
   const ct = response.headers.get("content-type") || "";
   if (ct.includes("application/json")) return response.json();
@@ -88,7 +101,7 @@ export async function apiBlob(path, options = {}) {
   }
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "Request failed");
+    throw new Error(formatApiError(text, response.status));
   }
   return response.blob();
 }
