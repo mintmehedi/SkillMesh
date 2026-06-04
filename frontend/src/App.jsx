@@ -1290,10 +1290,14 @@ export function CandidateOnboardingWorkExperience() {
     setEduRowErrors({});
     try {
       if (resumeFile && !resumeSynced) {
-        const fd = new FormData();
-        fd.append("file", resumeFile);
-        await api("/api/candidates/resume/upload", { method: "POST", body: fd });
-        setResumeSynced(true);
+        try {
+          const fd = new FormData();
+          fd.append("file", resumeFile);
+          await api("/api/candidates/resume/upload", { method: "POST", body: fd });
+          setResumeSynced(true);
+        } catch (uploadErr) {
+          setResumeError(String(uploadErr.message || uploadErr));
+        }
       }
       const eduPayload = educationRows
         .filter((r) => {
