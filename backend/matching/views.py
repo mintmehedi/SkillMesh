@@ -44,8 +44,9 @@ class CandidatesForJobView(views.APIView):
         if not job or job.employer_id != workspace_owner(request.user).id:
             return Response({"detail": "Job not found."}, status=404)
         premium = is_premium_company(request.user)
-        results = recommend_candidates_for_job(job_id, top_n=None if premium else 10)
-        capped = results if premium else results[:10]
+        results = recommend_candidates_for_job(job_id, top_n=None)
+        limit = None if premium else 10
+        capped = results if limit is None else results[:limit]
         for row in capped[:40]:
             RecommendationLog.objects.create(
                 subject_type="job",
@@ -54,4 +55,11 @@ class CandidatesForJobView(views.APIView):
                 score=row["score"],
                 explanation_json=row["explanation"],
             )
-        return Response(capped)
+        return Response(
+            {
+                "results": capped,
+                "is_limited": (not premium) and len(results) > len(capped),
+                "upgrade_cta": (not premium) and len(results) > len(capped),
+                "total_matches": len(results),
+            }
+        )

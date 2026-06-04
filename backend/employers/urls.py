@@ -7,6 +7,7 @@ from applications.employer_views import (
     EmployerApplicationResumeDownloadView,
 )
 from .team_views import EmployerTeamInviteListCreateView, EmployerTeamInvitePreviewView
+from .analytics_views import EmployerDashboardAnalyticsView
 from .views import (
     CompanyProfileUpsertView,
     EmployerJobDetailView,
@@ -17,6 +18,7 @@ from .views import (
 
 
 urlpatterns = [
+    path("dashboard/analytics", EmployerDashboardAnalyticsView.as_view(), name="employer-dashboard-analytics"),
     path("company/profile", CompanyProfileUpsertView.as_view(), name="company-profile"),
     path("team/invite/<uuid:token>", EmployerTeamInvitePreviewView.as_view(), name="employer-team-invite-preview"),
     path("team/invites", EmployerTeamInviteListCreateView.as_view(), name="employer-team-invites"),
