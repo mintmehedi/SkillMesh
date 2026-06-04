@@ -358,4 +358,6 @@ def recommend_candidates_for_job(job_id, top_n=10):
             }
         )
     ranked.sort(key=lambda x: x["score"], reverse=True)
+    if top_n is None:
+        return ranked
     return ranked[:top_n]

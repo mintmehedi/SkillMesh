@@ -60,3 +60,41 @@ class CandidateMembership(models.Model):
         self.status = self.Status.CANCELLED
         self.cancelled_at = timezone.now()
         self.save(update_fields=["status", "cancelled_at", "updated_at"])
+
+
+class CompanyMembership(models.Model):
+    class PlanType(models.TextChoices):
+        FREE = "free", "Free"
+        PREMIUM = "premium", "Premium"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        CANCELLED = "cancelled", "Cancelled"
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="company_membership",
+        limit_choices_to={"role": User.Role.EMPLOYER},
+        help_text="Membership is tracked on the employer workspace owner.",
+    )
+    plan_type = models.CharField(max_length=16, choices=PlanType.choices, default=PlanType.FREE)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    monthly_price = models.DecimalField(max_digits=6, decimal_places=2, default=9.99)
+    member_since = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def activate_premium(self):
+        self.plan_type = self.PlanType.PREMIUM
+        self.status = self.Status.ACTIVE
+        if not self.member_since:
+            self.member_since = timezone.now()
+        self.cancelled_at = None
+        self.save(update_fields=["plan_type", "status", "member_since", "cancelled_at", "updated_at"])
+
+    def cancel(self):
+        self.status = self.Status.CANCELLED
+        self.cancelled_at = timezone.now()
+        self.save(update_fields=["status", "cancelled_at", "updated_at"])

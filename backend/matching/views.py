@@ -1,7 +1,7 @@
 from rest_framework import permissions, views
 from rest_framework.response import Response
 
-from accounts.membership import is_premium_candidate
+from accounts.membership import is_premium_candidate, is_premium_company
 from accounts.permissions import IsEmployer
 from employers.models import JobPosting
 from employers.utils_workspace import workspace_owner
@@ -43,8 +43,10 @@ class CandidatesForJobView(views.APIView):
         job = JobPosting.objects.filter(pk=job_id).first()
         if not job or job.employer_id != workspace_owner(request.user).id:
             return Response({"detail": "Job not found."}, status=404)
-        results = recommend_candidates_for_job(job_id, top_n=10)
-        for row in results:
+        premium = is_premium_company(request.user)
+        results = recommend_candidates_for_job(job_id, top_n=None if premium else 10)
+        capped = results if premium else results[:10]
+        for row in capped[:40]:
             RecommendationLog.objects.create(
                 subject_type="job",
                 subject_id=job_id,
@@ -52,4 +54,4 @@ class CandidatesForJobView(views.APIView):
                 score=row["score"],
                 explanation_json=row["explanation"],
             )
-        return Response(results)
+        return Response(capped)
