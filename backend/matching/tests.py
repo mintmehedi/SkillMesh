@@ -4,9 +4,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import CandidateMembership
-from candidates.models import CandidateProfile, CandidateSkill
+from candidates.models import CandidateProfile, CandidateSkill, WorkExperience
 from employers.models import JobCategory, JobPosting, JobSkill
-from matching.services import recommend_jobs_for_candidate
+from matching.services import recommend_jobs_for_candidate, score_candidate_for_job
 
 
 User = get_user_model()
@@ -81,6 +81,62 @@ class MatchingServiceTests(TestCase):
             self.assertGreaterEqual(r["score"], floor - 0.02)
         if len(results) > len(high):
             self.assertLess(min(r["score"] for r in results), floor - 0.01)
+
+    def test_location_and_work_title_boost_matching_job(self):
+        candidate_user = User.objects.create_user(
+            email="loc@example.com", username="loccand", password="pass12345", role="candidate"
+        )
+        employer_user = User.objects.create_user(
+            email="locemp@example.com", username="locemp", password="pass12345", role="employer"
+        )
+        candidate = CandidateProfile.objects.create(
+            user=candidate_user,
+            full_name="Sydney Nurse",
+            headline="Registered nurse — acute care",
+            location="Sydney",
+            postcode="2000",
+            summary="Ward experience and patient advocacy",
+        )
+        CandidateSkill.objects.create(candidate=candidate, skill_name="patient care", level=4)
+        WorkExperience.objects.create(
+            candidate=candidate,
+            job_title="Registered Nurse",
+            company_name="Metro Hospital",
+            description="Acute medical ward",
+            start_date="2020-03-01",
+            is_current=True,
+            sort_order=0,
+        )
+        cat = JobCategory.objects.create(slug="nursing", name="Healthcare", sort_order=1)
+        local_job = JobPosting.objects.create(
+            employer=employer_user,
+            job_category=cat,
+            title="Registered Nurse",
+            jd_text="Acute ward patient care in Sydney",
+            location="Sydney NSW",
+            required_experience=1,
+            status="open",
+        )
+        JobSkill.objects.create(job=local_job, skill_name="patient care", weight=3)
+        remote_job = JobPosting.objects.create(
+            employer=employer_user,
+            title="Cobol Developer",
+            jd_text="Legacy systems",
+            location="Perth WA",
+            required_experience=0,
+            status="open",
+        )
+        JobSkill.objects.create(job=remote_job, skill_name="cobol", weight=2)
+
+        local_score, local_exp = score_candidate_for_job(candidate, local_job)
+        remote_score, remote_exp = score_candidate_for_job(candidate, remote_job)
+        self.assertGreater(local_score, remote_score)
+        self.assertTrue(local_exp["location_match"])
+        self.assertGreater(local_exp.get("title_role_hits", 0), 0)
+        self.assertIn("patient care", local_exp["matched_skills"])
+
+        results = recommend_jobs_for_candidate(candidate_user, top_k=3)
+        self.assertEqual(results[0]["job_id"], local_job.id)
 
 
 class MatchingMembershipApiTests(APITestCase):
