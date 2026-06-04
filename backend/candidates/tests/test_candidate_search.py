@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -143,3 +144,11 @@ class CandidateSearchApiTests(APITestCase):
         self.assertIn(self.profile_a.id, ids)
         self.assertIn(decoy.id, ids)
         self.assertLess(ids.index(self.profile_a.id), ids.index(decoy.id))
+
+    @override_settings(FEATURE_FLAGS={"enable_text_similarity": True})
+    def test_fuzzy_keyword_matches_typo_in_skill_and_role(self):
+        res = self.client.get("/api/candidates/search", {"keyword": "sofware enginer"})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        ids = [row["id"] for row in res.data]
+        self.assertIn(self.profile_b.id, ids)
+        self.assertLess(ids.index(self.profile_b.id), len(ids))
