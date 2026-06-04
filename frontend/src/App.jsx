@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getRoleHomePath, isPremiumCandidate, useAuth } from "./auth";
+import { getRoleHomePath, isPremiumCandidate, isPremiumCompany, useAuth } from "./auth";
 import { SiteDatePicker } from "./SiteDatePicker";
 import { api, apiBlob } from "./api";
 import { BackButton } from "./BackButton";
@@ -5228,6 +5228,160 @@ function CandidateMembershipPage() {
   );
 }
 
+function EmployerMembershipPage() {
+  const { user, refreshMe } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [membership, setMembership] = useState(null);
+
+  const premiumActive = membership?.plan_type === "premium" && membership?.status === "active";
+  const premiumCancelled = membership?.plan_type === "premium" && membership?.status === "cancelled";
+
+  const loadMembership = useCallback(async () => {
+    try {
+      const row = await api("/api/auth/company-membership");
+      setMembership(row);
+    } catch (e) {
+      setError(formatApiError(e) || "Could not load membership.");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMembership();
+  }, [loadMembership, user?.company_membership?.status, user?.company_membership?.plan_type]);
+
+  async function runAction(path, successMessage, redirectHome = false) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await api(path, { method: "POST" });
+      setMembership(updated);
+      await refreshMe();
+      setMessage(successMessage);
+      if (redirectHome) {
+        navigate("/employer", { replace: true });
+      }
+    } catch (e) {
+      setError(formatApiError(e) || "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const memberSinceLabel = membership?.member_since
+    ? new Date(membership.member_since).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
+  return (
+    <main className="homePage jobsSeekPage candidateMembershipPage">
+      <EmployerMemberHeader />
+      <section className="candidateMembershipHero" aria-label="Membership">
+        <div className="heroGlow heroGlowA" />
+        <div className="heroGlow heroGlowB" />
+        <div className="heroMesh" />
+        <div className="candidateMembershipHeroInner">
+          <Link className="jobsSeekLinkBtn candidateMembershipBack" to="/employer">
+            ← Dashboard
+          </Link>
+          <p className="heroKicker jobsSeekHeroKicker">Premium</p>
+          <h1 className="candidateMembershipTitle">Manage company membership</h1>
+          <p className="candidateMembershipLead muted">
+            Upgrade your employer workspace to unlock unlimited candidate recommendations for your jobs.
+          </p>
+        </div>
+      </section>
+
+      <div className="candidateMembershipBody">
+        {message ? <p className="success candidateMembershipFlash">{message}</p> : null}
+        {error ? <p className="error candidateMembershipFlash">{error}</p> : null}
+
+        <div className="candidateMembershipGrid">
+          <article className={`candidateMembershipPlanCard ${premiumActive ? "candidateMembershipPlanCardActive" : ""}`}>
+            <div className="candidateMembershipPlanHead">
+              <span className="candidateMembershipPlanBadge">SkillMesh Company Premium</span>
+              <p className="candidateMembershipPrice">
+                <span className="candidateMembershipPriceAmount">$9.99</span>
+                <span className="candidateMembershipPricePeriod">/ month</span>
+              </p>
+            </div>
+            <ul className="candidateMembershipBenefits">
+              <li>Unlimited recommended candidates for your jobs</li>
+              <li>Unlimited candidate recommendations across your workspace</li>
+              <li>Same employer dashboard and team workflow</li>
+              <li>Premium badge on your employer header</li>
+            </ul>
+
+            {premiumActive ? (
+              <div className="candidateMembershipActivePanel">
+                <p className="candidateMembershipStatusLine">
+                  <span className="candidateMembershipStatusDot" aria-hidden="true" />
+                  Active member
+                </p>
+                {memberSinceLabel ? (
+                  <p className="candidateMembershipSince muted">Member since {memberSinceLabel}</p>
+                ) : null}
+                <button
+                  type="button"
+                  className="candidateMembershipCancelBtn"
+                  disabled={busy}
+                  onClick={() => runAction("/api/auth/company-membership/cancel", "Membership cancelled.")}
+                >
+                  {busy ? "Updating…" : "Cancel membership"}
+                </button>
+              </div>
+            ) : (
+              <div className="candidateMembershipCtaPanel">
+                {premiumCancelled ? (
+                  <p className="candidateMembershipSince muted">
+                    Your premium access ended
+                    {membership?.cancelled_at ? ` on ${new Date(membership.cancelled_at).toLocaleDateString()}` : ""}.
+                  </p>
+                ) : (
+                  <p className="muted">You are on the free plan — top 10 candidate recommendations only.</p>
+                )}
+                <button
+                  type="button"
+                  className="jobsSeekCta candidateMembershipObtainBtn"
+                  disabled={busy}
+                  onClick={() =>
+                    runAction(
+                      premiumCancelled ? "/api/auth/company-membership/renew" : "/api/auth/company-membership/obtain",
+                      "Welcome to Company Premium! Your candidate recommendations are now unlocked.",
+                      true,
+                    )
+                  }
+                >
+                  {busy ? "Activating…" : premiumCancelled ? "Renew membership" : "Obtain membership"}
+                </button>
+              </div>
+            )}
+          </article>
+
+          <aside className="candidateMembershipAside card">
+            <h2 className="candidateMembershipAsideTitle">What changes after upgrade?</h2>
+            <p className="muted">
+              Your candidate recommendations expand from the top 10 to the full ranked list for each job, so you can
+              review more matches without leaving the dashboard.
+            </p>
+            <Link className="jobsSeekLinkBtn" to="/employer">
+              Back to dashboard
+            </Link>
+          </aside>
+        </div>
+      </div>
+
+      <footer className="jobsSeekFooter">© {new Date().getFullYear()} SkillMesh</footer>
+    </main>
+  );
+}
+
 function CandidateResumeSettingsPage() {
   const premium = isPremiumCandidate(useAuth().user);
   return (
@@ -5430,6 +5584,9 @@ function EmployerDashboard() {
             </Link>
             <Link className="jobsSeekLinkBtn candidateDashHeroLink" to="/employer/company">
               Company profile
+            </Link>
+            <Link className="jobsSeekLinkBtn candidateDashHeroLink" to="/employer/settings/membership">
+              Membership
             </Link>
           </div>
         </div>
@@ -6210,6 +6367,14 @@ export default function App() {
           <CandidateOnboardingRoute page="dashboard">
             <CandidateResumeSettingsPage />
           </CandidateOnboardingRoute>
+        }
+      />
+      <Route
+        path="/employer/settings/membership"
+        element={
+          <Protected roles={["employer"]}>
+            <EmployerMembershipPage />
+          </Protected>
         }
       />
       <Route

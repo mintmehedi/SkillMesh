@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "./auth";
+import { isPremiumCompany, useAuth } from "./auth";
 import { SiteBrandBar } from "./SiteBrandBar";
 
 export function EmployerMemberHeader() {
@@ -19,6 +19,7 @@ export function EmployerMemberHeader() {
     }
     return (user?.email || "?").charAt(0).toUpperCase();
   }, [user]);
+  const isPremium = isPremiumCompany(user);
 
   useEffect(() => {
     const onScroll = () => setHeaderScrolled(window.scrollY > 10);
@@ -65,6 +66,11 @@ export function EmployerMemberHeader() {
           <span className="candidateProfileAvatar" aria-hidden="true">
             {initials}
           </span>
+          {isPremium ? (
+            <span className="candidatePremiumBrandBadge" aria-label="Premium member" title="Premium member">
+              PRO
+            </span>
+          ) : null}
           <span className={`candidateProfileChev ${menuOpen ? "candidateProfileChevOpen" : ""}`} aria-hidden />
         </button>
         <div
@@ -83,6 +89,14 @@ export function EmployerMemberHeader() {
           </Link>
           <Link role="menuitem" className="candidateProfileMenuItem" to="/employer/company" onClick={() => setMenuOpen(false)}>
             Company profile
+          </Link>
+          <Link
+            role="menuitem"
+            className="candidateProfileMenuItem"
+            to="/employer/settings/membership"
+            onClick={() => setMenuOpen(false)}
+          >
+            Membership
           </Link>
           <Link role="menuitem" className="candidateProfileMenuItem" to="/employer/support" onClick={() => setMenuOpen(false)}>
             Support & FAQ
