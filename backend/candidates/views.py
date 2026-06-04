@@ -61,6 +61,16 @@ class CandidateProfileBundleView(APIView):
         return Response(_serialize_candidate_profile(profile))
 
     def put(self, request):
+        try:
+            return self._put_bundle(request)
+        except Exception:
+            logger.exception("candidate profile bundle PUT failed")
+            return Response(
+                {"detail": "Could not save education and work experience. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _put_bundle(self, request):
         profile, _ = CandidateProfile.objects.get_or_create(
             user=request.user,
             defaults={"full_name": request.user.get_full_name() or request.user.email},
@@ -317,11 +327,23 @@ class ResumeUploadView(generics.GenericAPIView):
         display_name = (serializer.validated_data.get("display_name") or "").strip()
         if not display_name:
             display_name = (Path(uploaded.name).stem or "Resume")[:255]
-        resume = ResumeDocument.objects.create(
-            candidate=profile,
-            file=uploaded,
-            display_name=display_name,
-        )
+        try:
+            resume = ResumeDocument.objects.create(
+                candidate=profile,
+                file=uploaded,
+                display_name=display_name,
+            )
+        except OSError:
+            logger.exception("resume file storage failed")
+            return Response(
+                {
+                    "detail": (
+                        "Could not store the resume file on the server. "
+                        "You can still enter education and work experience manually."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         try:
             resume.file.open("rb")
             raw_text = extract_text_from_upload(resume.file)
