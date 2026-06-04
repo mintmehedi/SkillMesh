@@ -9,9 +9,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .geo_meta import AU_SUBURB_POSTCODES, COUNTRIES, STATES_BY_COUNTRY
 from .jwt_cookies import auth_response_with_cookies, clear_jwt_cookies, set_jwt_cookies, strip_tokens_from_response_data
 from .throttling import AuthAnonThrottle, MetaAutocompleteThrottle
-from .membership import get_or_create_membership
+from .membership import get_or_create_company_membership, get_or_create_membership
 from .serializers import (
     CandidateMembershipSerializer,
+    CompanyMembershipSerializer,
     CandidateRegisterSerializer,
     EmailTokenObtainPairSerializer,
     MeSerializer,
@@ -122,6 +123,49 @@ class CandidateMembershipRenewView(views.APIView):
         membership = get_or_create_membership(request.user)
         membership.activate_premium()
         return Response(CandidateMembershipSerializer(membership).data, status=status.HTTP_200_OK)
+
+
+class CompanyMembershipView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != User.Role.EMPLOYER:
+            return Response({"detail": "Employer account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_company_membership(request.user)
+        return Response(CompanyMembershipSerializer(membership).data)
+
+
+class CompanyMembershipObtainView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.EMPLOYER:
+            return Response({"detail": "Employer account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_company_membership(request.user)
+        membership.activate_premium()
+        return Response(CompanyMembershipSerializer(membership).data, status=status.HTTP_200_OK)
+
+
+class CompanyMembershipCancelView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.EMPLOYER:
+            return Response({"detail": "Employer account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_company_membership(request.user)
+        membership.cancel()
+        return Response(CompanyMembershipSerializer(membership).data, status=status.HTTP_200_OK)
+
+
+class CompanyMembershipRenewView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.EMPLOYER:
+            return Response({"detail": "Employer account required."}, status=status.HTTP_403_FORBIDDEN)
+        membership = get_or_create_company_membership(request.user)
+        membership.activate_premium()
+        return Response(CompanyMembershipSerializer(membership).data, status=status.HTTP_200_OK)
 
 
 class CountryAutocompleteView(views.APIView):

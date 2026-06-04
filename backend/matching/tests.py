@@ -179,3 +179,53 @@ class MatchingMembershipApiTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertFalse(res.data["is_limited"])
         self.assertGreaterEqual(len(res.data["results"]), 11)
+
+
+class EmployerRecommendationMembershipTests(APITestCase):
+    def setUp(self):
+        self.employer = User.objects.create_user(
+            email="owner@example.com",
+            username="owner",
+            password="pass12345",
+            role="employer",
+        )
+        self.candidates = []
+        for i in range(12):
+            user = User.objects.create_user(
+                email=f"cand{i}@example.com",
+                username=f"cand{i}",
+                password="pass12345",
+                role="candidate",
+            )
+            CandidateProfile.objects.create(user=user, full_name=f"Candidate {i}", preferred_mode="remote")
+            self.candidates.append(user)
+        self.cat = JobCategory.objects.create(slug="api-dev-2", name="API Dev 2", sort_order=3)
+        self.job = JobPosting.objects.create(
+            employer=self.employer,
+            job_category=self.cat,
+            title="Python Engineer",
+            jd_text="Python backend django rest",
+            required_experience=1,
+            work_mode="remote",
+            status="open",
+        )
+        for i in range(12):
+            JobSkill.objects.create(job=self.job, skill_name="python", weight=3)
+        self.client.force_authenticate(user=self.employer)
+
+    def test_free_plan_is_limited_to_ten_candidates(self):
+        res = self.client.get(f"/api/recommendations/candidates-for-job/{self.job.id}")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 10)
+
+    def test_premium_plan_gets_full_candidate_list(self):
+        from accounts.models import CompanyMembership
+
+        CompanyMembership.objects.create(
+            user=self.employer,
+            plan_type=CompanyMembership.PlanType.PREMIUM,
+            status=CompanyMembership.Status.ACTIVE,
+        )
+        res = self.client.get(f"/api/recommendations/candidates-for-job/{self.job.id}")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 12)

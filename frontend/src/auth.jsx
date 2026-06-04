@@ -16,6 +16,14 @@ export function isPremiumCandidate(user) {
   );
 }
 
+export function isPremiumCompany(user) {
+  return (
+    user?.role === "employer" &&
+    user?.company_membership?.plan_type === "premium" &&
+    user?.company_membership?.status === "active"
+  );
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
