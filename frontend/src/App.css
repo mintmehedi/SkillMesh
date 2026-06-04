@@ -2688,6 +2688,67 @@ a.candidateProfileMenuItem {
   margin: 0.85rem 0 0;
 }
 
+.employerDashChartsCard {
+  margin-top: 0.85rem;
+}
+
+.employerDashChartsLocked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.employerDashChartsUpgrade {
+  align-self: flex-start;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+.employerDashChartsLoading {
+  margin: 0.5rem 0 0;
+}
+
+.employerDashChartsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.65rem;
+}
+
+.employerDashChartFigure {
+  margin: 0;
+}
+
+.employerDashChartImg {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0f1419;
+}
+
+.employerDashChartCaption {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted, #9aa0a6);
+  text-align: center;
+}
+
+.employerDashChartsSummary {
+  margin-top: 0.75rem;
+}
+
+.employerDashRecUpgrade {
+  margin-top: 1rem;
+}
+
+.employerDashRecLimitedNote {
+  margin: 0.75rem 0 0;
+  font-size: 0.88rem;
+}
+
 .employerDashSearchForm {
   margin-top: 0.35rem;
 }

@@ -2112,6 +2112,7 @@ function candidateJobMatchesWhere(j, locationFilter, locationSearchTerms) {
 }
 
 const FREE_RECOMMENDATION_LIMIT = 10;
+const EMPLOYER_FREE_RECOMMENDATION_LIMIT = 10;
 
 function CandidateHomePage() {
   const { user } = useAuth();
@@ -5231,6 +5232,7 @@ function CandidateMembershipPage() {
 function EmployerMembershipPage() {
   const { user, refreshMe } = useAuth();
   const navigate = useNavigate();
+  const isTeamMember = user?.employer_company?.is_team_member;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -5314,10 +5316,16 @@ function EmployerMembershipPage() {
             <ul className="candidateMembershipBenefits">
               <li>Unlimited recommended candidates for your jobs</li>
               <li>Unlimited candidate recommendations across your workspace</li>
+              <li>Hiring analytics charts on your dashboard (matplotlib insights)</li>
               <li>Same employer dashboard and team workflow</li>
               <li>Premium badge on your employer header</li>
             </ul>
 
+            {isTeamMember ? (
+              <p className="muted candidateMembershipTeamNote">
+                Membership is managed by your workspace owner. You still benefit from the owner&apos;s premium plan.
+              </p>
+            ) : null}
             {premiumActive ? (
               <div className="candidateMembershipActivePanel">
                 <p className="candidateMembershipStatusLine">
@@ -5330,7 +5338,7 @@ function EmployerMembershipPage() {
                 <button
                   type="button"
                   className="candidateMembershipCancelBtn"
-                  disabled={busy}
+                  disabled={busy || isTeamMember}
                   onClick={() => runAction("/api/auth/company-membership/cancel", "Membership cancelled.")}
                 >
                   {busy ? "Updating…" : "Cancel membership"}
@@ -5349,11 +5357,11 @@ function EmployerMembershipPage() {
                 <button
                   type="button"
                   className="jobsSeekCta candidateMembershipObtainBtn"
-                  disabled={busy}
+                  disabled={busy || isTeamMember}
                   onClick={() =>
                     runAction(
                       premiumCancelled ? "/api/auth/company-membership/renew" : "/api/auth/company-membership/obtain",
-                      "Welcome to Company Premium! Your candidate recommendations are now unlocked.",
+                      "Welcome to Company Premium! Your candidate recommendations and analytics are now unlocked.",
                       true,
                     )
                   }
@@ -5367,8 +5375,8 @@ function EmployerMembershipPage() {
           <aside className="candidateMembershipAside card">
             <h2 className="candidateMembershipAsideTitle">What changes after upgrade?</h2>
             <p className="muted">
-              Your candidate recommendations expand from the top 10 to the full ranked list for each job, so you can
-              review more matches without leaving the dashboard.
+              Your candidate recommendations expand from the top 10 to the full ranked list for each job, and your
+              dashboard unlocks matplotlib hiring analytics charts.
             </p>
             <Link className="jobsSeekLinkBtn" to="/employer">
               Back to dashboard
@@ -5412,6 +5420,9 @@ function CandidateResumeSettingsPage() {
 }
 
 function EmployerDashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const premium = isPremiumCompany(user);
   const [companyProfile, setCompanyProfile] = useState({
     ...EMPTY_EMPLOYER_COMPANY,
   });
@@ -5429,6 +5440,14 @@ function EmployerDashboard() {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [recAttempted, setRecAttempted] = useState(false);
   const [resultsTab, setResultsTab] = useState("search");
+  const [recMeta, setRecMeta] = useState({
+    is_limited: false,
+    upgrade_cta: false,
+    total_matches: 0,
+  });
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsLocked, setAnalyticsLocked] = useState(false);
 
   const hasActiveFilters = useMemo(
     () => Object.values(candidateFilters).some((v) => String(v || "").trim()),
@@ -5499,6 +5518,44 @@ function EmployerDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    if (dashLoading) return undefined;
+    if (!premium) {
+      setAnalytics(null);
+      setAnalyticsLocked(true);
+      setAnalyticsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setAnalyticsLoading(true);
+    setAnalyticsLocked(false);
+    (async () => {
+      try {
+        const data = await api("/api/employers/dashboard/analytics");
+        if (!cancelled) {
+          setAnalytics(data);
+          setAnalyticsLocked(false);
+        }
+      } catch {
+        if (!cancelled) setAnalytics(null);
+      } finally {
+        if (!cancelled) setAnalyticsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dashLoading, premium]);
+
+  const showRecUpgradeCta = useMemo(
+    () =>
+      !premium &&
+      (recMeta.upgrade_cta ||
+        recMeta.total_matches > EMPLOYER_FREE_RECOMMENDATION_LIMIT ||
+        recs.length >= EMPLOYER_FREE_RECOMMENDATION_LIMIT),
+    [premium, recMeta, recs.length],
+  );
+
   function clearCandidateFilters() {
     setCandidateFilters({ ...EMPTY_CANDIDATE_SEARCH_FILTERS });
     setCandidates([]);
@@ -5537,14 +5594,25 @@ function EmployerDashboard() {
     }
     setRecBusy(true);
     try {
-      const list = await api(`/api/recommendations/candidates-for-job/${id}`);
-      setRecs(Array.isArray(list) ? list : []);
+      const res = await api(`/api/recommendations/candidates-for-job/${id}`);
+      const list = Array.isArray(res) ? res : res?.results ?? [];
+      setRecs(list);
+      setRecMeta({
+        is_limited: !!res?.is_limited,
+        upgrade_cta: !!res?.upgrade_cta,
+        total_matches: res?.total_matches ?? list.length,
+      });
       setRecAttempted(true);
       setResultsTab("matches");
-      setStatus("Matches loaded.");
+      const limitedNote =
+        res?.is_limited && !premium
+          ? ` Showing top ${EMPLOYER_FREE_RECOMMENDATION_LIMIT} of ${res?.total_matches ?? list.length} matches (free plan).`
+          : "";
+      setStatus(`Matches loaded.${limitedNote}`);
     } catch (err) {
       setError(formatApiError(err));
       setRecs([]);
+      setRecMeta({ is_limited: false, upgrade_cta: false, total_matches: 0 });
     } finally {
       setRecBusy(false);
     }
@@ -5624,6 +5692,49 @@ function EmployerDashboard() {
                     Complete your profile
                   </Link>{" "}
                   to attract stronger applicants.
+                </p>
+              ) : null}
+            </section>
+
+            <section
+              className="candidateDashCard candidateDashCardCompact employerDashChartsCard"
+              aria-labelledby="employer-dash-charts-heading"
+            >
+              <h2 id="employer-dash-charts-heading" className="employerDashStatStripTitle">
+                Hiring analytics
+              </h2>
+              {!premium || analyticsLocked ? (
+                <div className="employerDashChartsLocked">
+                  <p className="muted">
+                    Company Premium unlocks matplotlib charts for job pipeline, application status, and hiring trends.
+                  </p>
+                  <Link className="jobsSeekCta employerDashChartsUpgrade" to="/employer/settings/membership">
+                    Upgrade membership
+                  </Link>
+                </div>
+              ) : analyticsLoading ? (
+                <p className="muted employerDashChartsLoading">Loading charts…</p>
+              ) : analytics?.charts?.length ? (
+                <div className="employerDashChartsGrid">
+                  {analytics.charts.map((chart) => (
+                    <figure key={chart.id} className="employerDashChartFigure">
+                      <img
+                        className="employerDashChartImg"
+                        src={`data:image/png;base64,${chart.image_base64}`}
+                        alt={chart.title}
+                        loading="lazy"
+                      />
+                      <figcaption className="employerDashChartCaption">{chart.title}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">Post jobs and receive applications to populate your analytics charts.</p>
+              )}
+              {premium && analytics?.summary ? (
+                <p className="candidateDashCardHint employerDashChartsSummary muted">
+                  {analytics.summary.open_jobs} open · {analytics.summary.total_applications} applications ·{" "}
+                  {analytics.summary.applications_last_14_days} in the last 14 days
                 </p>
               ) : null}
             </section>
@@ -5974,6 +6085,27 @@ function EmployerDashboard() {
                       </tbody>
                     </table>
                   )}
+                  {showRecUpgradeCta ? (
+                    <div className="jobsSeekUpgradeCard employerDashRecUpgrade">
+                      <p className="jobsSeekUpgradeTitle">Unlock more candidate matches</p>
+                      <p className="jobsSeekUpgradeText muted">
+                        Free accounts see your top {EMPLOYER_FREE_RECOMMENDATION_LIMIT} ranked candidates per job.
+                        Company Premium shows the full list.
+                      </p>
+                      <button
+                        type="button"
+                        className="jobsSeekCta jobsSeekUpgradeCta"
+                        onClick={() => navigate("/employer/settings/membership")}
+                      >
+                        Upgrade membership
+                      </button>
+                    </div>
+                  ) : null}
+                  {recMeta.is_limited && recs.length > 0 ? (
+                    <p className="muted employerDashRecLimitedNote">
+                      Showing first {EMPLOYER_FREE_RECOMMENDATION_LIMIT} of {recMeta.total_matches} matches (free plan).
+                    </p>
+                  ) : null}
                 </div>
               )}
             </section>

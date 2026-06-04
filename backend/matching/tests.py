@@ -216,7 +216,9 @@ class EmployerRecommendationMembershipTests(APITestCase):
     def test_free_plan_is_limited_to_ten_candidates(self):
         res = self.client.get(f"/api/recommendations/candidates-for-job/{self.job.id}")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 10)
+        self.assertEqual(len(res.data["results"]), 10)
+        self.assertTrue(res.data["is_limited"])
+        self.assertEqual(res.data["total_matches"], 12)
 
     def test_premium_plan_gets_full_candidate_list(self):
         from accounts.models import CompanyMembership
@@ -228,4 +230,5 @@ class EmployerRecommendationMembershipTests(APITestCase):
         )
         res = self.client.get(f"/api/recommendations/candidates-for-job/{self.job.id}")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 12)
+        self.assertEqual(len(res.data["results"]), 12)
+        self.assertFalse(res.data["is_limited"])

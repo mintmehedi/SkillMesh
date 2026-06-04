@@ -4,6 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from accounts.models import CandidateMembership, CompanyMembership
+
 User = get_user_model()
 
 
@@ -86,3 +88,84 @@ class AuthFlowTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertFalse(res.data["available"])
         self.assertEqual(res.data["existing_role"], "employer")
+
+
+class MembershipApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="member@example.com",
+            username="member_user",
+            password="pass12345",
+            role="candidate",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_membership_lifecycle(self):
+        res = self.client.get("/api/auth/membership")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["plan_type"], "free")
+
+        obtain = self.client.post("/api/auth/membership/obtain")
+        self.assertEqual(obtain.status_code, status.HTTP_200_OK)
+        self.assertEqual(obtain.data["plan_type"], "premium")
+
+        cancel = self.client.post("/api/auth/membership/cancel")
+        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel.data["status"], "cancelled")
+
+        renew = self.client.post("/api/auth/membership/renew")
+        self.assertEqual(renew.status_code, status.HTTP_200_OK)
+        self.assertEqual(renew.data["status"], "active")
+
+        row = CandidateMembership.objects.get(user=self.user)
+        self.assertEqual(row.plan_type, CandidateMembership.PlanType.PREMIUM)
+
+
+class EmployerMembershipApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="employer@example.com",
+            username="employer_user",
+            password="pass12345",
+            role="employer",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_membership_lifecycle(self):
+        res = self.client.get("/api/auth/company-membership")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["plan_type"], "free")
+
+        obtain = self.client.post("/api/auth/company-membership/obtain")
+        self.assertEqual(obtain.status_code, status.HTTP_200_OK)
+        self.assertEqual(obtain.data["plan_type"], "premium")
+
+        cancel = self.client.post("/api/auth/company-membership/cancel")
+        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel.data["status"], "cancelled")
+
+        renew = self.client.post("/api/auth/company-membership/renew")
+        self.assertEqual(renew.status_code, status.HTTP_200_OK)
+        self.assertEqual(renew.data["status"], "active")
+
+        row = CompanyMembership.objects.get(user=self.user)
+        self.assertEqual(row.plan_type, CompanyMembership.PlanType.PREMIUM)
+
+    def test_teammate_cannot_manage_membership(self):
+        owner = User.objects.create_user(
+            email="owner-mem@example.com",
+            username="owner_mem",
+            password="pass12345",
+            role="employer",
+        )
+        teammate = User.objects.create_user(
+            email="mate-mem@example.com",
+            username="mate_mem",
+            password="pass12345",
+            role="employer",
+            employer_organization_owner=owner,
+        )
+        self.client.force_authenticate(user=teammate)
+        res = self.client.post("/api/auth/company-membership/obtain")
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(CompanyMembership.objects.filter(user=owner).exists())
