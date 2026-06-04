@@ -8,7 +8,7 @@ Usage (from backend/):
 
     python manage.py seed_bulk_demo --yes
 
-Password for every seeded account: Airfroce02#
+Password for every seeded account: Password123!#
 Employer emails: employer01@skillmesh.dev … employer10@skillmesh.dev
 Candidate emails: candidate01@skillmesh.dev … candidate20@skillmesh.dev
 """
@@ -37,7 +37,7 @@ from matching.models import RecommendationLog
 
 User = get_user_model()
 
-DEFAULT_PASSWORD = "Airfroce02#"
+DEFAULT_PASSWORD = "Password123!#"
 NUM_EMPLOYERS = 10
 JOBS_PER_EMPLOYER = 10
 NUM_CANDIDATES = 20
