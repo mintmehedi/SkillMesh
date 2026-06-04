@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { DatePicker } from "@mui/x-date-pickers";
 import dayjs from "dayjs";
 
@@ -71,6 +72,14 @@ function DobDateField({ label, value, onChange, disabled, slotProps }) {
   const fieldId = id || "dob-date-field";
   const helperId = helperText ? `${fieldId}-helper` : undefined;
 
+  // Keep partial day/month/year in local state so each <select> does not reset while
+  // the parent only stores a complete ISO date (buildDobIso returns "" until all three are set).
+  const [parts, setParts] = useState(() => parseDobValue(value));
+
+  useEffect(() => {
+    setParts(parseDobValue(value));
+  }, [value]);
+
   const maxYear = dobMaxDate().year();
   const minYear = DOB_MIN.year();
   const years = [];
@@ -78,7 +87,6 @@ function DobDateField({ label, value, onChange, disabled, slotProps }) {
     years.push(y);
   }
 
-  const parts = parseDobValue(value);
   const maxDay = daysInMonth(parts.month, parts.year);
   const days = Array.from({ length: maxDay }, (_, i) => i + 1);
 
@@ -90,6 +98,7 @@ function DobDateField({ label, value, onChange, disabled, slotProps }) {
         next.day = String(cap);
       }
     }
+    setParts(next);
     onChange(buildDobIso(next.day, next.month, next.year));
   };
 
