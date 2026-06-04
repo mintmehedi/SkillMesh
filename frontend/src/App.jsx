@@ -5792,6 +5792,8 @@ function EmployerDashboard() {
                           <th>Score</th>
                           <th>Matched skills</th>
                           <th>Education fit</th>
+                          <th>Location</th>
+                          <th>Role title</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -5808,6 +5810,8 @@ function EmployerDashboard() {
                             </td>
                             <td>{(r.explanation?.matched_skills || []).join(", ") || "—"}</td>
                             <td>{r.explanation?.education_match ? "Yes" : "—"}</td>
+                            <td>{r.explanation?.location_match ? "Yes" : "—"}</td>
+                            <td>{r.explanation?.title_role_hits > 0 ? r.explanation.title_role_hits : "—"}</td>
                           </tr>
                         ))}
                       </tbody>
