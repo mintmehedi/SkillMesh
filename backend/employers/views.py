@@ -4,6 +4,7 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 
 from accounts.permissions import IsEmployer
+from core.search_fuzzy import fuzzy_search_enabled, fuzzy_similarity_expr
 from .models import CompanyProfile, JobPosting
 
 
@@ -103,6 +104,7 @@ class JobSearchView(generics.ListAPIView):
         )
         keyword = (self.request.query_params.get("keyword") or "").strip()
         token_list = [t for t in keyword.lower().split() if len(t) >= 2]
+        fuzzy_enabled = fuzzy_search_enabled()
         if keyword:
             qs = qs.annotate(
                 _wot_txt=Cast("whats_on_offer", TextField()),
@@ -139,8 +141,27 @@ class JobSearchView(generics.ListAPIView):
                     | Q(jd_text__icontains=tok)
                     | Q(company_info__icontains=tok)
                 )
-            if token_list:
+            if token_list and not fuzzy_enabled:
                 qs = qs.filter(token_q)
+            if fuzzy_enabled:
+                qs = qs.annotate(
+                    _fuzzy_score=fuzzy_similarity_expr(
+                        "title",
+                        "jd_text",
+                        "location",
+                        "company_info",
+                        "how_to_apply",
+                        "licenses_certifications",
+                        "job_category__name",
+                        "skills__skill_name",
+                        "employer__company_profile__location",
+                        "employer__company_profile__suburb",
+                        "employer__company_profile__city",
+                        "employer__company_profile__postcode",
+                        "employer__company_profile__state_region",
+                        term=keyword,
+                    )
+                ).filter(_fuzzy_score__gte=0.18)
 
         cat = (self.request.query_params.get("category") or "").strip()
         if cat.isdigit():
@@ -163,13 +184,27 @@ class JobSearchView(generics.ListAPIView):
             qs = qs.filter(_job_location_token_q(t))
 
         if keyword:
-            qs = qs.annotate(
-                _rank_title=Case(When(title__icontains=keyword, then=Value(60)), default=Value(0), output_field=IntegerField()),
-                _rank_skill=Case(When(skills__skill_name__icontains=keyword, then=Value(30)), default=Value(0), output_field=IntegerField()),
-                _rank_category=Case(When(job_category__name__icontains=keyword, then=Value(20)), default=Value(0), output_field=IntegerField()),
-                _rank_text=Case(When(jd_text__icontains=keyword, then=Value(10)), default=Value(0), output_field=IntegerField()),
-                _rank_location=Case(When(location__icontains=keyword, then=Value(8)), default=Value(0), output_field=IntegerField()),
-            ).order_by("-_rank_title", "-_rank_skill", "-_rank_category", "-_rank_text", "-_rank_location", "-created_at")
+            annotations = {
+                "_rank_title": Case(When(title__icontains=keyword, then=Value(60)), default=Value(0), output_field=IntegerField()),
+                "_rank_skill": Case(When(skills__skill_name__icontains=keyword, then=Value(30)), default=Value(0), output_field=IntegerField()),
+                "_rank_category": Case(When(job_category__name__icontains=keyword, then=Value(20)), default=Value(0), output_field=IntegerField()),
+                "_rank_text": Case(When(jd_text__icontains=keyword, then=Value(10)), default=Value(0), output_field=IntegerField()),
+                "_rank_location": Case(When(location__icontains=keyword, then=Value(8)), default=Value(0), output_field=IntegerField()),
+            }
+            if fuzzy_enabled:
+                annotations["_rank_fuzzy"] = Case(
+                    When(_fuzzy_score__gte=0.35, then=Value(25)),
+                    When(_fuzzy_score__gte=0.28, then=Value(18)),
+                    When(_fuzzy_score__gte=0.22, then=Value(10)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            qs = qs.annotate(**annotations)
+            order = ["-_rank_title", "-_rank_skill"]
+            if fuzzy_enabled:
+                order.append("-_rank_fuzzy")
+            order.extend(["-_rank_category", "-_rank_text", "-_rank_location", "-created_at"])
+            qs = qs.order_by(*order)
             return qs
         return qs.order_by("-created_at")
 
