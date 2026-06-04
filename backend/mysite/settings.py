@@ -255,7 +255,15 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Vercel serverless only allows writes under /tmp; default media/ is read-only at runtime.
+_media_root_env = (os.environ.get("MEDIA_ROOT") or "").strip()
+if _media_root_env:
+    MEDIA_ROOT = Path(_media_root_env)
+elif os.environ.get("VERCEL"):
+    MEDIA_ROOT = Path("/tmp/skillmesh-media")
+else:
+    MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 FEATURE_FLAGS = {
     "enable_text_similarity": os.environ.get("FF_ENABLE_TEXT_SIMILARITY", "false").lower() == "true",
