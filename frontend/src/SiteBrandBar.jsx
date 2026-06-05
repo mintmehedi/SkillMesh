@@ -4,15 +4,15 @@ import { getRoleHomePath, useAuth } from "./auth";
 import ldLogo from "./assets/ld.png";
 
 /**
- * Sticky-header style block: optional back control + SkillMesh wordmark logo (used sitewide).
+ * Sticky-header style block: back control + SkillMesh wordmark logo (used sitewide).
  */
-export function SiteBrandBar({ leadClassName = "", brandClassName = "", fallbackTo, showBack = true, showProBadge = false }) {
+export function SiteBrandBar({ leadClassName = "", brandClassName = "", fallbackTo, showProBadge = false }) {
   const { user } = useAuth();
   const homePath = getRoleHomePath(user);
 
   return (
     <div className={`homeHeaderLead ${leadClassName}`.trim()}>
-      {showBack ? <BackButton className="homeHeaderBack" fallbackTo={fallbackTo} /> : null}
+      <BackButton className="homeHeaderBack" fallbackTo={fallbackTo} />
       <Link
         to={homePath}
         className={`homeHeaderBrand ${brandClassName}`.trim()}

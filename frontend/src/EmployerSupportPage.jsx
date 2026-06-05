@@ -26,24 +26,21 @@ export function EmployerSupportPage() {
   return (
     <main className="homePage employerSupportPage">
       <EmployerMemberHeader />
-      <section className="employerSupportHero">
-        <p className="hero-eyebrow">Support</p>
+      <section className="card employerSupportCard fadeInUp">
         <h1>Support & FAQ</h1>
         <p className="muted">
           Need help with SkillMesh employer features? Contact the platform developer or check common answers below.
         </p>
-      </section>
 
-      <section className="employerSupportGrid">
-        <article className="card employerSupportContact">
+        <div className="employerSupportContact card">
           <h2>Contact developer</h2>
           <p>
             Email: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
           </p>
           <p className="muted">Include your account email, affected page, and what happened so we can help faster.</p>
-        </article>
+        </div>
 
-        <article className="card employerSupportFaq">
+        <div className="employerSupportFaq card">
           <h2>Frequently asked questions</h2>
           <div className="employerSupportFaqList">
             {FAQ_ITEMS.map((item) => (
@@ -53,17 +50,17 @@ export function EmployerSupportPage() {
               </article>
             ))}
           </div>
-        </article>
-      </section>
+        </div>
 
-      <div className="row employerSupportActions">
-        <Link className="modernBtn" to="/employer">
-          Back to employer dashboard
-        </Link>
-        <Link className="btnGhost" to="/employer/jobs">
-          Open job listings
-        </Link>
-      </div>
+        <div className="row employerSupportActions">
+          <Link className="modernBtn" to="/employer">
+            Back to employer dashboard
+          </Link>
+          <Link className="btnGhost" to="/employer/jobs">
+            Open job listings
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }
