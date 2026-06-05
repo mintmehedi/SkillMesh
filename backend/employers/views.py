@@ -31,7 +31,12 @@ def _job_location_token_q(term: str) -> Q:
     )
     no_job_location = Q(location__exact="") | Q(location__isnull=True)
     return posted | (no_job_location & employer_geo)
-from .serializers import CompanyProfileSerializer, JobPostingPublicSerializer, JobPostingSerializer
+from .serializers import (
+    CompanyProfileSerializer,
+    EmployerJobListSerializer,
+    JobPostingPublicSerializer,
+    JobPostingSerializer,
+)
 from .utils_workspace import workspace_owner
 
 
@@ -64,9 +69,17 @@ class EmployerJobListCreateView(generics.ListCreateAPIView):
     serializer_class = JobPostingSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmployer]
 
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return EmployerJobListSerializer
+        return JobPostingSerializer
+
     def get_queryset(self):
         owner = workspace_owner(self.request.user)
-        return JobPosting.objects.filter(employer=owner).order_by("-created_at")
+        qs = JobPosting.objects.filter(employer=owner).select_related("job_category")
+        if self.request.method == "GET":
+            return qs.order_by("-created_at")
+        return qs.prefetch_related("skills").order_by("-created_at")
 
     def perform_create(self, serializer):
         serializer.save(employer=workspace_owner(self.request.user))

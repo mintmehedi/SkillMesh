@@ -180,6 +180,25 @@ class JobPostingPublicSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class EmployerJobListSerializer(serializers.ModelSerializer):
+    """Lightweight list payload for employer job sidebars and dashboard."""
+
+    job_category = JobCategorySerializer(read_only=True)
+
+    class Meta:
+        model = JobPosting
+        fields = (
+            "id",
+            "job_category",
+            "title",
+            "work_mode",
+            "location",
+            "status",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
 class JobPostingSerializer(serializers.ModelSerializer):
     skills = JobSkillSerializer(many=True, required=False)
     job_category = JobCategorySerializer(read_only=True)

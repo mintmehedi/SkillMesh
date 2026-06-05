@@ -6,7 +6,7 @@ import ldLogo from "./assets/ld.png";
 /**
  * Sticky-header style block: back control + SkillMesh wordmark logo (used sitewide).
  */
-export function SiteBrandBar({ leadClassName = "", brandClassName = "", fallbackTo }) {
+export function SiteBrandBar({ leadClassName = "", brandClassName = "", fallbackTo, showProBadge = false }) {
   const { user } = useAuth();
   const homePath = getRoleHomePath(user);
 
@@ -21,6 +21,11 @@ export function SiteBrandBar({ leadClassName = "", brandClassName = "", fallback
       >
         <img className="homeHeaderLogo" src={ldLogo} alt="" />
         <span className="homeHeaderWordmark">SkillMesh</span>
+        {showProBadge ? (
+          <span className="candidatePremiumBrandBadge" aria-label="Premium member" title="Premium member">
+            PRO
+          </span>
+        ) : null}
       </Link>
     </div>
   );
