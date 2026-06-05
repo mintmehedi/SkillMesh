@@ -1,0 +1,24 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Every 5 days at 00:00 UTC (days 1, 6, 11, 16, 21, 26 of each month).
+    - cron: "0 0 */5 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          http_code=$(echo "$response" | tail -n1)
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Supabase ping failed with HTTP $http_code"
+            exit 1
+          fi
+          echo "Supabase ping succeeded (HTTP $http_code)"
