@@ -7,6 +7,7 @@ import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { JobPostingDetailPanel } from "./JobPostingDetailPanel";
 import { SiteBrandBar } from "./SiteBrandBar";
 import { formatPostedShort } from "./jobFormatters";
+import { fetchJobDetailCached, primeJobCache } from "./jobCache";
 import { BackButton } from "./BackButton";
 
 function employerPreviewMessage(job) {
@@ -57,7 +58,7 @@ export function JobDetailPage() {
       setPreviewMode(false);
       let publicFailed = false;
       try {
-        const data = await api(`/api/jobs/${idNum}/`, { withAuth: false });
+        const data = await fetchJobDetailCached(idNum);
         if (cancelled) return;
         setJob(data);
         return;
@@ -70,6 +71,7 @@ export function JobDetailPage() {
           const data = await api(`/api/employers/jobs/${idNum}`);
           if (cancelled) return;
           setJob(data);
+          primeJobCache(data);
           setPreviewMode(true);
         } catch {
           if (!cancelled) {
@@ -87,6 +89,7 @@ export function JobDetailPage() {
               ...app.job_detail,
               company_info: app.job_detail.company_info || "Employer",
             });
+            primeJobCache(app.job_detail);
             setLoadError("");
             return;
           }
@@ -207,7 +210,7 @@ export function JobDetailPage() {
     return (
       <main className="jobDetailPage jobDetailPageError">
         <header className="jobDetailPageHeader jobDetailPageHeaderSimple">
-          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" />
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" showBack={false} />
         </header>
         <div className="jobDetailPageInner">
           <p className="error">Invalid job link.</p>
@@ -227,7 +230,7 @@ export function JobDetailPage() {
         <CandidateMemberHeader />
       ) : user?.role === "employer" ? (
         <header className="jobDetailPageHeader jobDetailPageHeaderEmployer">
-          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" fallbackTo="/" />
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" fallbackTo="/" showBack={false} />
           <nav className="jobDetailPageHeaderNav" aria-label="Employer shortcuts">
             <Link className="jobDetailPageNavLink" to="/employer">
               Dashboard
@@ -245,11 +248,11 @@ export function JobDetailPage() {
         </header>
       ) : (
         <header className="jobDetailPageHeader jobDetailPageHeaderSimple">
-          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" />
+          <SiteBrandBar leadClassName="jobDetailPageHeaderLead" showBack={false} />
         </header>
       )}
 
-      <div className="jobDetailPageHero">
+      <section className="jobDetailPageHero">
         <div className="jobDetailBackRow">
           <BackButton className="jobDetailBackBtn" fallbackTo={browseJobsTo} />
           <span className="jobDetailBackLabel">Back</span>
@@ -261,7 +264,16 @@ export function JobDetailPage() {
           </span>
           <span className="jobDetailBreadcrumbCurrent">{job?.title ? job.title : "Role"}</span>
         </nav>
-      </div>
+        {job?.title ? (
+          <div className="jobDetailHeroTitleBlock">
+            <p className="hero-eyebrow">Job detail</p>
+            <h1>{job.title}</h1>
+            <p className="jobDetailHeroLead">
+              {job.company_info || "Employer"} • {job.location || "Location not specified"}
+            </p>
+          </div>
+        ) : null}
+      </section>
 
       <div className="jobDetailPageInner">
         {!loadError && !job && <p className="jobDetailPageLoading muted">Loading job…</p>}
@@ -325,24 +337,26 @@ export function JobDetailPage() {
                 <span className="jobDetailShareHint muted">Share this page — same view candidates see on SkillMesh.</span>
               )}
             </div>
-            <JobPostingDetailPanel
-              job={job}
-              matchInfo={null}
-              hasApplied={hasApplied}
-              onApply={
-                previewMode || user?.role === "employer"
-                  ? undefined
-                  : user?.role === "candidate" && user?.candidate_onboarding?.onboarding_step === "done"
-                    ? handleApply
-                    : undefined
-              }
-              showFullPageLink={false}
-              employerPreview={previewMode}
-              employerViewingPublic={user?.role === "employer" && !previewMode}
-              fullPageLayout
-              bookmarkSaved={bookmarkSaved}
-              onBookmarkToggle={showBookmarkControl ? toggleBookmark : undefined}
-            />
+            <div className="jobDetailPageBodyWrap">
+              <JobPostingDetailPanel
+                job={job}
+                matchInfo={null}
+                hasApplied={hasApplied}
+                onApply={
+                  previewMode || user?.role === "employer"
+                    ? undefined
+                    : user?.role === "candidate" && user?.candidate_onboarding?.onboarding_step === "done"
+                      ? handleApply
+                      : undefined
+                }
+                showFullPageLink={false}
+                employerPreview={previewMode}
+                employerViewingPublic={user?.role === "employer" && !previewMode}
+                fullPageLayout
+                bookmarkSaved={bookmarkSaved}
+                onBookmarkToggle={showBookmarkControl ? toggleBookmark : undefined}
+              />
+            </div>
           </>
         )}
       </div>

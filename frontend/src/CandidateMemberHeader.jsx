@@ -1,12 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getRoleHomePath, isPremiumCandidate, useAuth } from "./auth";
-import ldLogo from "./assets/ld.png";
+import { isPremiumCandidate, useAuth } from "./auth";
+import { SiteBrandBar } from "./SiteBrandBar";
 
 export function CandidateMemberHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const homePath = getRoleHomePath(user);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -54,17 +53,7 @@ export function CandidateMemberHeader() {
 
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
-      <div className="homeHeaderLead">
-        <Link to={homePath} className="homeHeaderBrand candidateHeaderBrand">
-          <img className="homeHeaderLogo" src={ldLogo} alt="" />
-          <span className="homeHeaderWordmark">SkillMesh</span>
-          {isPremium ? (
-            <span className="candidatePremiumBrandBadge" aria-label="Premium member" title="Premium member">
-              PRO
-            </span>
-          ) : null}
-        </Link>
-      </div>
+      <SiteBrandBar brandClassName="candidateHeaderBrand" showBack={false} showProBadge={isPremium} />
       <div className="candidateProfileMenuRoot" ref={menuRef}>
         <button
           type="button"

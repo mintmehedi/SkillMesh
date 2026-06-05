@@ -50,8 +50,8 @@ function formatMoneyAmount(n) {
   if (n == null || n === "") return "";
   const num = Number(n);
   if (Number.isNaN(num)) return String(n);
-  if (Number.isInteger(num)) return String(num);
-  return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const formatted = Number.isInteger(num) ? String(num) : num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return `$${formatted}`;
 }
 
 /**
