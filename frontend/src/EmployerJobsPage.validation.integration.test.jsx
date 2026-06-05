@@ -5,6 +5,20 @@ import userEvent from "@testing-library/user-event";
 import { EmployerJobsPage } from "./EmployerJobsPage.jsx";
 import { renderWithProviders } from "./test/renderWithProviders.jsx";
 
+vi.mock("./auth", () => ({
+  useAuth: () => ({
+    user: {
+      role: "employer",
+      email: "owner@example.com",
+    },
+    logout: vi.fn(),
+    refreshMe: vi.fn(),
+  }),
+  getRoleHomePath: () => "/employer",
+  isPremiumCompany: () => false,
+  isPremiumCandidate: () => false,
+}));
+
 vi.mock("./api", () => ({
   api: vi.fn(),
 }));
