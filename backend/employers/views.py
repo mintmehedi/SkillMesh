@@ -4,8 +4,34 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 
 from accounts.permissions import IsEmployer
-from core.search_fuzzy import fuzzy_search_enabled, fuzzy_similarity_expr
+from core.search_fuzzy import apply_keyword_filter, fuzzy_search_enabled, maybe_fuzzy_rank_annotation
 from .models import CompanyProfile, JobPosting
+
+_JOB_FUZZY_FIELDS = (
+    "title",
+    "jd_text",
+    "location",
+    "company_info",
+    "how_to_apply",
+    "licenses_certifications",
+    "job_category__name",
+    "skills__skill_name",
+    "employer__company_profile__location",
+    "employer__company_profile__suburb",
+    "employer__company_profile__city",
+    "employer__company_profile__postcode",
+    "employer__company_profile__state_region",
+)
+
+
+def _job_token_q(tok: str) -> Q:
+    return (
+        Q(title__icontains=tok)
+        | Q(skills__skill_name__icontains=tok)
+        | Q(job_category__name__icontains=tok)
+        | Q(jd_text__icontains=tok)
+        | Q(company_info__icontains=tok)
+    )
 
 
 def _job_location_token_q(term: str) -> Q:
@@ -116,7 +142,6 @@ class JobSearchView(generics.ListAPIView):
             .prefetch_related("skills")
         )
         keyword = (self.request.query_params.get("keyword") or "").strip()
-        token_list = [t for t in keyword.lower().split() if len(t) >= 2]
         fuzzy_enabled = fuzzy_search_enabled()
         if keyword:
             qs = qs.annotate(
@@ -146,38 +171,15 @@ class JobSearchView(generics.ListAPIView):
                 | Q(_rb_txt__icontains=keyword)
                 | Q(_wcu_txt__icontains=keyword)
             )
-            token_q = Q()
-            for tok in token_list:
-                token_q &= (
-                    Q(title__icontains=tok)
-                    | Q(skills__skill_name__icontains=tok)
-                    | Q(job_category__name__icontains=tok)
-                    | Q(jd_text__icontains=tok)
-                    | Q(company_info__icontains=tok)
-                )
-            if token_list and not fuzzy_enabled:
-                qs = qs.filter(exact_keyword_q).filter(token_q).distinct()
-            if fuzzy_enabled:
-                qs = qs.annotate(
-                    _fuzzy_score=fuzzy_similarity_expr(
-                        "title",
-                        "jd_text",
-                        "location",
-                        "company_info",
-                        "how_to_apply",
-                        "licenses_certifications",
-                        "job_category__name",
-                        "skills__skill_name",
-                        "employer__company_profile__location",
-                        "employer__company_profile__suburb",
-                        "employer__company_profile__city",
-                        "employer__company_profile__postcode",
-                        "employer__company_profile__state_region",
-                        term=keyword,
-                    )
-                ).filter(exact_keyword_q | Q(_fuzzy_score__gte=0.18)).distinct()
-            elif not token_list:
-                qs = qs.filter(exact_keyword_q).distinct()
+
+            qs = apply_keyword_filter(
+                qs,
+                keyword=keyword,
+                exact_q=exact_keyword_q,
+                token_predicate=_job_token_q,
+                fuzzy_fields=_JOB_FUZZY_FIELDS,
+                fuzzy_enabled=fuzzy_enabled,
+            )
 
         cat = (self.request.query_params.get("category") or "").strip()
         if cat.isdigit():
@@ -207,14 +209,7 @@ class JobSearchView(generics.ListAPIView):
                 "_rank_text": Case(When(jd_text__icontains=keyword, then=Value(10)), default=Value(0), output_field=IntegerField()),
                 "_rank_location": Case(When(location__icontains=keyword, then=Value(8)), default=Value(0), output_field=IntegerField()),
             }
-            if fuzzy_enabled:
-                annotations["_rank_fuzzy"] = Case(
-                    When(_fuzzy_score__gte=0.35, then=Value(25)),
-                    When(_fuzzy_score__gte=0.28, then=Value(18)),
-                    When(_fuzzy_score__gte=0.22, then=Value(10)),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
+            annotations.update(maybe_fuzzy_rank_annotation(fuzzy_enabled))
             qs = qs.annotate(**annotations)
             order = ["-_rank_title", "-_rank_skill"]
             if fuzzy_enabled:

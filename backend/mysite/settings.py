@@ -107,10 +107,17 @@ if not DATABASE_URL:
         )
 
 _running_tests = "test" in sys.argv
+_test_db_strategy = "explicit"
 if _running_tests:
     test_db_url = (os.environ.get("TEST_DATABASE_URL") or "").strip().strip('"').strip("'")
     if test_db_url:
         DATABASE_URL = test_db_url
+    else:
+        from mysite.db_url import resolve_test_database_url
+
+        DATABASE_URL, _test_db_strategy = resolve_test_database_url(DATABASE_URL)
+
+_TEST_DB_STRATEGY = _test_db_strategy
 
 is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
 try:
@@ -122,6 +129,8 @@ try:
     DATABASES["default"]["ENGINE"] = "mysite.db_backends.postgresql"
     if _running_tests:
         DATABASES["default"]["CONN_MAX_AGE"] = 0
+        if _test_db_strategy == "transaction-pooler":
+            DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 except dj_database_url.ParseError as exc:
     raise RuntimeError(
         "DATABASE_URL is not a valid PostgreSQL URI. Common causes: (1) The literal "

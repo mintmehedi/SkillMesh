@@ -2,8 +2,31 @@
 
 from django.db.models import Case, IntegerField, Q, Value, When
 
-from core.search_fuzzy import fuzzy_search_enabled, fuzzy_similarity_expr
+from core.search_fuzzy import apply_keyword_filter, fuzzy_search_enabled, maybe_fuzzy_rank_annotation
 from .models import CandidateProfile
+
+_CANDIDATE_FUZZY_FIELDS = (
+    "full_name",
+    "headline",
+    "summary",
+    "major",
+    "education_level",
+    "location",
+    "postcode",
+    "country",
+    "availability",
+    "preferred_mode",
+    "skills__skill_name",
+    "work_experiences__job_title",
+    "work_experiences__company_name",
+    "work_experiences__description",
+    "education_entries__institution",
+    "education_entries__degree",
+    "education_entries__field_of_study",
+    "education_entries__major",
+    "education_entries__description",
+    "preferred_job_categories__name",
+)
 
 
 def _profile_keyword_q(term: str) -> Q:
@@ -95,40 +118,14 @@ def filter_candidate_queryset(qs, request):
         qs = qs.filter(skills__skill_name__icontains=skills)
 
     if keyword:
-        qs = qs.filter(_profile_keyword_q(keyword)).distinct()
-        token_list = [t for t in keyword.lower().split() if len(t) >= 2]
-        if token_list:
-            token_q = Q()
-            for tok in token_list:
-                token_q &= _profile_token_q(tok)
-            if not fuzzy_enabled:
-                qs = qs.filter(token_q).distinct()
-        if fuzzy_enabled:
-            qs = qs.annotate(
-                _fuzzy_score=fuzzy_similarity_expr(
-                    "full_name",
-                    "headline",
-                    "summary",
-                    "major",
-                    "education_level",
-                    "location",
-                    "postcode",
-                    "country",
-                    "availability",
-                    "preferred_mode",
-                    "skills__skill_name",
-                    "work_experiences__job_title",
-                    "work_experiences__company_name",
-                    "work_experiences__description",
-                    "education_entries__institution",
-                    "education_entries__degree",
-                    "education_entries__field_of_study",
-                    "education_entries__major",
-                    "education_entries__description",
-                    "preferred_job_categories__name",
-                    term=keyword,
-                )
-            ).filter(_fuzzy_score__gte=0.18)
+        qs = apply_keyword_filter(
+            qs,
+            keyword=keyword,
+            exact_q=_profile_keyword_q(keyword),
+            token_predicate=_profile_token_q,
+            fuzzy_fields=_CANDIDATE_FUZZY_FIELDS,
+            fuzzy_enabled=fuzzy_enabled,
+        )
 
     if education:
         qs = qs.filter(_education_q(education)).distinct()
@@ -180,14 +177,7 @@ def filter_candidate_queryset(qs, request):
                 output_field=IntegerField(),
             ),
         }
-        if fuzzy_enabled:
-            annotations["_rank_fuzzy"] = Case(
-                When(_fuzzy_score__gte=0.35, then=Value(25)),
-                When(_fuzzy_score__gte=0.28, then=Value(18)),
-                When(_fuzzy_score__gte=0.22, then=Value(10)),
-                default=Value(0),
-                output_field=IntegerField(),
-            )
+        annotations.update(maybe_fuzzy_rank_annotation(fuzzy_enabled))
         qs = qs.annotate(**annotations)
         order = ["-_rank_name", "-_rank_headline", "-_rank_skill"]
         if fuzzy_enabled:
