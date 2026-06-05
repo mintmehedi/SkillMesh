@@ -9,7 +9,17 @@ const mockRefreshMe = vi.fn();
 const mockNavigate = vi.fn();
 
 vi.mock("./auth", () => ({
-  useAuth: () => ({ refreshMe: mockRefreshMe }),
+  useAuth: () => ({
+    user: {
+      role: "candidate",
+      email: "candidate@example.com",
+    },
+    refreshMe: mockRefreshMe,
+    logout: vi.fn(),
+  }),
+  getRoleHomePath: () => "/",
+  isPremiumCandidate: () => false,
+  isPremiumCompany: () => false,
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
