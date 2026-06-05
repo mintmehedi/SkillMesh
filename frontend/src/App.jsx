@@ -23,6 +23,7 @@ import {
   formatWorkModeLabel,
   matchScorePercent,
 } from "./jobFormatters";
+import { fetchJobDetailCached, fetchJobFeedCached, fetchJobSearchCached } from "./jobCache";
 import ldLogo from "./assets/ld.png";
 import "./App.css";
 import {
@@ -169,69 +170,136 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   return (
-    <form
-      className={`card authCard fadeInUp ${isEmployerLogin ? "authCardEmployerLogin" : "registerShell"}`}
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setError("");
-        try {
-          await login(email, password);
-          navigate("/", { replace: true });
-        } catch (err) {
-          setError(String(err.message || err));
-        }
-      }}
-    >
-      <div className="authLoginHeaderRow">
-        <div className="authLoginHeaderStart">
-          <BackButton className="homeHeaderBack" />
+    <>
+      <nav className="nav">
+        <Link className="nav-logo" to={getRoleHomePath(null)}>
+          Skill<span>mesh</span>
+        </Link>
+        <div className="nav-right">
+          <span style={{ fontSize: "13px", color: "rgba(255,255,255,.5)" }}>New here?</span>
+          <Link
+            className="btn-amber"
+            to="/register"
+            style={{ fontSize: "13px", padding: "6px 16px", borderRadius: "6px", textDecoration: "none", fontWeight: 600, color: "#fff" }}
+          >
+            Get started
+          </Link>
         </div>
-        <div className="authLoginHeaderBrand">
-          <AuthBrand />
-        </div>
-        <div className="authLoginHeaderEnd" aria-hidden="true" />
-      </div>
-      <h2 className={isEmployerLogin ? "authEmployerLoginTitle" : "authCandidateLoginTitle"}>
-        {isEmployerLogin ? "Employer sign in" : "Login"}
-      </h2>
-      {error && <p className="error">{error}</p>}
-      <input
-        className={`authInput ${isEmployerLogin ? "authInputLg" : ""}`}
-        placeholder="Email"
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <div className="passwordFieldWrap">
-        <input
-          className={`authInput authInputWithToggle ${isEmployerLogin ? "authInputLg" : ""}`}
-          placeholder="Password"
-          type={showPassword ? "text" : "password"}
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          className="passwordToggleBtn"
-          type="button"
-          onClick={() => setShowPassword((prev) => !prev)}
-          aria-label={showPassword ? "Hide password" : "Show password"}
+      </nav>
+      <div className="login-bg">
+        <form
+          className="auth-card"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (isSubmitting) return;
+            setError("");
+            setIsSubmitting(true);
+            try {
+              await login(email, password);
+              navigate("/", { replace: true });
+            } catch (err) {
+              setError(String(err.message || err));
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}
         >
-          <EyeIcon open={showPassword} />
-        </button>
+          <div className="auth-logo">
+            Skill<span>mesh</span>
+          </div>
+          <div className="auth-title">Welcome back</div>
+          <div className="auth-sub">Login or create an account to get started.</div>
+
+          <div className="role-toggle">
+            <button
+              type="button"
+              className={`role-btn ${!isEmployerLogin ? "active" : ""}`}
+              id="roleSeeker"
+              disabled={isSubmitting}
+              onClick={() => navigate("/login")}
+            >
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              Job seeker
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${isEmployerLogin ? "active" : ""}`}
+              id="roleEmp"
+              disabled={isSubmitting}
+              onClick={() => navigate("/login?role=employer")}
+            >
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="2" y="7" width="20" height="14" rx="2" />
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              </svg>
+              Employer
+            </button>
+          </div>
+
+          <div className="tab-row">
+            <button type="button" className="tab-btn active" id="tabLogin">
+              Login
+            </button>
+            <Link className="tab-btn" id="tabReg" to={`/register${isEmployerLogin ? "?role=employer" : ""}`}>
+              Register
+            </Link>
+          </div>
+
+          {error && <p className="error">{error}</p>}
+          <div className="field">
+            <label>Email address</label>
+            <input
+              placeholder="you@email.com"
+              type="email"
+              autoComplete="email"
+              value={email}
+              disabled={isSubmitting}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>Password</label>
+            <div className="passwordFieldWrap">
+              <input
+                className="authInput authInputWithToggle"
+                placeholder="Enter your password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                disabled={isSubmitting}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                className="passwordToggleBtn"
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
+          </div>
+          <a className="forgot" href="#">
+            Forgot password?
+          </a>
+          <button className="submit-btn" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Login to Skillmesh"}
+          </button>
+          <div className="switch-text">
+            Don&apos;t have an account? <Link to="/register">Register free</Link>
+          </div>
+          <div className="terms">
+            By continuing, you agree to SkillMesh&apos;s terms and privacy policy.
+          </div>
+        </form>
       </div>
-      <button className={`modernBtn ${isEmployerLogin ? "authEmployerLoginSubmit" : ""}`} type="submit">
-        {isEmployerLogin ? "Sign in" : "Login"}
-      </button>
-      {isEmployerLogin && (
-        <p className="muted authEmployerLoginFooter">
-          New here?{" "}
-          <Link to="/register?role=employer">Create an employer account</Link>
-        </p>
-      )}
-    </form>
+    </>
   );
 }
 
@@ -1040,9 +1108,12 @@ function RegisterPage() {
               {usernameStatus.state === "checking" ? "Checking username…" : "Create employer account"}
             </button>
             <p className="registerEmployerFooter muted">
-              Already have an account? <Link to="/login?role=employer">Sign in</Link>
-              <span className="registerEmployerFooterSep">·</span>
-              Looking for jobs? <Link to="/register?role=candidate">Create a candidate account</Link>
+              <span className="registerEmployerFooterRow">
+                Already have an account? <Link to="/login?role=employer">Sign in</Link>
+              </span>
+              <span className="registerEmployerFooterRow">
+                Looking for jobs? <Link to="/register?role=candidate">Create a candidate account</Link>
+              </span>
             </p>
           </div>
         </div>
@@ -2183,8 +2254,7 @@ function CandidateHomePage() {
     setJobsError("");
     setLoadingFeed(true);
     try {
-      const feed = await api("/api/jobs/feed", { withAuth: false });
-      const list = Array.isArray(feed) ? feed : [];
+      const list = await fetchJobFeedCached();
       setFeedJobs(list);
       return list;
     } catch {
@@ -2216,7 +2286,7 @@ function CandidateHomePage() {
       const extras = await Promise.all(
         missingIds.slice(0, 40).map(async (id) => {
           try {
-            const j = await api(`/api/jobs/${id}/`, { withAuth: false });
+            const j = await fetchJobDetailCached(id);
             return j?.id ? j : null;
           } catch {
             return null;
@@ -2417,8 +2487,7 @@ function CandidateHomePage() {
       if (wm) params.set("work_mode", wm);
       if (locTerms.length) params.set("loc_terms", locTerms.join(","));
       else if (loc) params.set("location", loc);
-      const rows = await api(`/api/jobs/search?${params.toString()}`);
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchJobSearchCached(params.toString());
       setSearchResults(list);
       setShowingSearchResults(true);
       setSelectedJobId(list[0]?.id ?? null);
@@ -2548,15 +2617,18 @@ function CandidateHomePage() {
     <main className="homePage jobsSeekPage">
       <CandidateMemberHeader />
 
-      <section className="jobsSeekHero" aria-label="Job search">
+      <section className="jobsSeekHero homeHero" aria-label="Job search">
         <div className="heroGlow heroGlowA" />
         <div className="heroGlow heroGlowB" />
         <div className="heroMesh" />
         <div className="jobsSeekHeroInner">
-          <p className="heroKicker jobsSeekHeroKicker">Browse roles</p>
+          <p className="hero-eyebrow jobsSeekHeroKicker">Browse roles</p>
+          <h1>Find your next role</h1>
+          <p className="homeSubtitle">
+            Search jobs by title, skill, location, or classification. The board below updates as you refine your search.
+          </p>
           <div className="jobsSeekSearchGrid">
             <div className="jobsSeekFieldBlock">
-              <span className="jobsSeekFieldLabel">What</span>
               <div className="jobsSeekWhatRow">
                 <input
                   className="jobsSeekInput"
@@ -2581,7 +2653,6 @@ function CandidateHomePage() {
               </div>
             </div>
             <div className="jobsSeekFieldBlock jobsSeekWhereBlock">
-              <span className="jobsSeekFieldLabel">Where</span>
               <div className="jobsSeekWhereWrap">
                 <input
                   className="jobsSeekInput"
@@ -2647,6 +2718,20 @@ function CandidateHomePage() {
                 {searchLoading ? "…" : "Search"}
               </button>
             </div>
+          </div>
+          <div className="chips homeChips">
+            <button type="button" className={`chip ${workModeFilter === "" ? "active" : ""}`} onClick={() => setWorkModeFilter("")}>
+              All work modes
+            </button>
+            <button type="button" className={`chip ${workModeFilter === "remote" ? "active" : ""}`} onClick={() => setWorkModeFilter("remote")}>
+              Remote
+            </button>
+            <button type="button" className={`chip ${workModeFilter === "hybrid" ? "active" : ""}`} onClick={() => setWorkModeFilter("hybrid")}>
+              Hybrid
+            </button>
+            <button type="button" className={`chip ${workModeFilter === "onsite" ? "active" : ""}`} onClick={() => setWorkModeFilter("onsite")}>
+              On-site
+            </button>
           </div>
           <button
             type="button"
@@ -3523,24 +3608,24 @@ function CandidateDashboard() {
     || "there");
 
   return (
-    <main className="homePage jobsSeekPage candidateDashboardPage">
+    <main className="homePage candidateProfilePage candidateDashPage">
       <CandidateMemberHeader />
 
-      <section className="jobsSeekHero candidateDashHero" aria-label="Dashboard">
-        <div className="heroGlow heroGlowA" />
-        <div className="heroGlow heroGlowB" />
-        <div className="heroMesh" />
+      <section className="candidateDashHero" aria-label="Candidate profile">
         <div className="jobsSeekHeroInner candidateDashHeroInner">
           <div className="candidateDashHeroText">
-            <p className="heroKicker jobsSeekHeroKicker">Your profile</p>
+            <p className="hero-eyebrow">Candidate profile</p>
             <h1 className="candidateDashTitle">Hi, {greetingName}</h1>
-            <p className="candidateDashLead muted">
-              Keep details, skills, and resumes current so employers and SkillMesh can match you accurately.
+            <p className="candidateDashLead">
+              Keep your profile current so employers can find you and SkillMesh can recommend stronger matches.
             </p>
           </div>
           <div className="candidateDashHeroActions">
             <Link className="jobsSeekCta candidateDashBrowseCta" to="/">
               Browse jobs
+            </Link>
+            <Link className="candidateDashSavedJobsBtn" to="/candidate/applied-jobs">
+              <span className="candidateDashSavedJobsBtnLabel">My applications</span>
             </Link>
             <Link className="candidateDashSavedJobsBtn" to="/candidate/saved-jobs">
               <span className="candidateDashSavedJobsBtnLabel">Saved jobs</span>
@@ -3554,341 +3639,296 @@ function CandidateDashboard() {
         </div>
       </section>
 
-      <div className="candidateDashFlash">
-        {status && <p className="candidateDashBanner candidateDashBannerSuccess">{status}</p>}
-        {error && <p className="candidateDashBanner candidateDashBannerError">{error}</p>}
-      </div>
+      <div className="profile-wrap">
+        {status ? <p className="candidateDashBanner candidateDashBannerSuccess">{status}</p> : null}
+        {error ? <p className="candidateDashBanner candidateDashBannerError">{error}</p> : null}
+        <div className="page-title">My Profile</div>
+        <div className="page-sub">Complete your profile so employers can find you and we can recommend the best jobs.</div>
 
-      <div className="candidateDashLayout candidateDashLayoutSolo">
-        <div className="candidateDashMain">
-          <article className="candidateDashCard candidateDashCardProfile" aria-labelledby="dash-profile-heading">
-            <div className="candidateDashProfileHead">
-              <div>
-                <h2 id="dash-profile-heading" className="candidateDashCardTitle">
-                  Profile
-                </h2>
-                <p className="candidateDashCardHint candidateDashCardHintTight">
-                  Information employers see in search and when you apply.
-                </p>
-              </div>
-              <div className="candidateDashStrengthMini" aria-label={`Profile ${profileStrength} percent complete`}>
-                <div className="candidateDashStrengthRing" style={{ "--p": profileStrength }}>
-                  <span>{profileStrength}%</span>
-                </div>
-              </div>
+        <div className="progress-card">
+          <div className="progress-text">
+            <div className="progress-label">Profile completeness - keep going to get better matches!</div>
+            <div className="progress-bar-bg">
+              <div className="progress-bar-fill" style={{ width: `${profileStrength}%` }} />
             </div>
+          </div>
+          <div className="progress-pct">{profileStrength}%</div>
+        </div>
 
-            <div className="candidateDashFormGrid">
-              <div className="jobsSeekFieldBlock candidateDashSpan2">
-                <span className="jobsSeekFieldLabel">Headline</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="e.g. Final-year CS student · Seeking graduate software role"
-                  value={profile.headline || ""}
-                  onChange={(e) => setProfile({ ...profile, headline: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Full name</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="Your name"
-                  value={profile.full_name || ""}
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock candidateDashDobField">
-                <SiteDatePicker
-                  variant="dob"
-                  label="Date of birth"
-                  value={profile.date_of_birth || ""}
-                  onChange={(v) => setProfile({ ...profile, date_of_birth: v })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Mobile</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="Phone"
-                  value={profile.mobile_number || ""}
-                  onChange={(e) => setProfile({ ...profile, mobile_number: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Contact / email alt</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="Other contact"
-                  value={profile.contact || ""}
-                  onChange={(e) => setProfile({ ...profile, contact: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Location</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="City or region"
-                  value={profile.location || ""}
-                  onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Availability</span>
-                <select
-                  className="jobsSeekSelect"
-                  value={profile.availability || ""}
-                  onChange={(e) => setProfile({ ...profile, availability: e.target.value })}
-                >
-                  <option value="">Select…</option>
-                  <option value="immediate">Immediately</option>
-                  <option value="2_weeks">Within 2 weeks</option>
-                  <option value="1_month">Within 1 month</option>
-                  <option value="internship">Internship period only</option>
-                  <option value="not_looking">Not actively looking</option>
-                </select>
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Postcode</span>
-                <input
-                  className="jobsSeekInput"
-                  value={profile.postcode || ""}
-                  onChange={(e) => setProfile({ ...profile, postcode: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Country</span>
-                <input
-                  className="jobsSeekInput"
-                  value={profile.country || ""}
-                  onChange={(e) => setProfile({ ...profile, country: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Education level</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="e.g. Bachelor"
-                  value={profile.education_level || ""}
-                  onChange={(e) => setProfile({ ...profile, education_level: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Major / field</span>
-                <input
-                  className="jobsSeekInput"
-                  placeholder="e.g. Computer Science"
-                  value={profile.major || ""}
-                  onChange={(e) => setProfile({ ...profile, major: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">LinkedIn</span>
-                <input
-                  className="jobsSeekInput"
-                  type="url"
-                  placeholder="https://linkedin.com/in/…"
-                  value={profile.linkedin_url || ""}
-                  onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock">
-                <span className="jobsSeekFieldLabel">Portfolio / GitHub</span>
-                <input
-                  className="jobsSeekInput"
-                  type="url"
-                  placeholder="https://…"
-                  value={profile.portfolio_url || ""}
-                  onChange={(e) => setProfile({ ...profile, portfolio_url: e.target.value })}
-                />
-              </div>
-              <div className="jobsSeekFieldBlock candidateDashSpan2">
-                <span className="jobsSeekFieldLabel">Preferred work mode</span>
-                <select
-                  className="jobsSeekSelect"
-                  value={profile.preferred_mode || ""}
-                  onChange={(e) => setProfile({ ...profile, preferred_mode: e.target.value })}
-                >
-                  <option value="">Select…</option>
-                  <option value="remote">Remote</option>
-                  <option value="hybrid">Hybrid</option>
-                  <option value="onsite">On-site</option>
-                </select>
-              </div>
-              <div className="jobsSeekFieldBlock candidateDashSpan2">
-                <span className="jobsSeekFieldLabel">Professional summary</span>
-                <textarea
-                  className="jobsSeekInput candidateDashTextarea"
-                  rows={4}
-                  placeholder="Short overview for employers…"
-                  value={profile.summary || ""}
-                  onChange={(e) => setProfile({ ...profile, summary: e.target.value })}
-                />
-              </div>
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              Resume / CV
             </div>
-
-            <h3 className="candidateDashSubheading">Preferred job categories</h3>
-            <p className="candidateDashCardHint candidateDashCardHintTight">
-              Matching jobs appear first on your home feed; we also use this for future recommendations.
-              {categoryIds.length > 0 ? ` ${categoryIds.length} selected.` : " Pick at least one."}
-            </p>
-            <div className="candidateDashCategoryGrid categoryGrid" role="group" aria-label="Preferred job categories">
-              {jobCategories.map((c) => {
-                const on = categoryIds.includes(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`categoryPill candidateDashCatPill ${on ? "categoryPillActive candidateDashCatPillOn" : ""}`}
-                    aria-pressed={on}
-                    onClick={() => toggleCategory(c.id)}
-                  >
-                    {on ? <span className="categoryPillCheck" aria-hidden="true">✓</span> : null}
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            <h3 className="candidateDashSubheading">Skills</h3>
-            <p className="candidateDashCardHint candidateDashCardHintTight">Suggestions combine job data, the ESCO skill API, and common tags.</p>
-            <div className="candidateDashSkillWrap" ref={skillSuggestRef}>
-              <div className="candidateDashSkillRow">
-                <input
-                  className="jobsSeekInput"
-                  placeholder="Start typing a skill…"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addSkill(skillInput);
-                    }
-                  }}
-                  autoComplete="off"
-                />
-                <button type="button" className="modernBtn candidateDashSkillAdd" onClick={() => addSkill(skillInput)}>
-                  Add
-                </button>
-              </div>
-              {skillSuggestions.length > 0 && (
-                <ul className="candidateDashSuggestList" role="listbox">
-                  {skillSuggestions.map((s) => (
-                    <li key={s.skill_name}>
-                      <button type="button" className="candidateDashSuggestItem" onClick={() => addSkill(s.skill_name)}>
-                        {s.skill_name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="jobsSeekChipRow candidateDashChipRow">
-              {(profile.skills || []).map((s, i) => (
-                <span className="candidateDashSkillChip" key={`${s.skill_name}-${i}`}>
-                  {s.skill_name}
-                  <button type="button" className="candidateDashSkillRemove" onClick={() => removeSkill(i)} aria-label={`Remove ${s.skill_name}`}>
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-
-            <h3 className="candidateDashSubheading">Education</h3>
-            <p className="candidateDashCardHint candidateDashCardHintTight">Same fields as onboarding — edits here update the same record.</p>
-            {eduRows.map((row, index) => (
-              <div className="candidateDashMiniCard" key={`dash-edu-${index}`}>
-                <div className="candidateDashFormGrid">
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Institution</span>
-                    <input className="jobsSeekInput" placeholder="Institution" value={row.institution || ""} onChange={(e) => updateEduRow(index, { institution: e.target.value })} />
-                  </div>
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Degree</span>
-                    <input className="jobsSeekInput" placeholder="e.g. Bachelor of Science" value={row.degree || ""} onChange={(e) => updateEduRow(index, { degree: e.target.value })} />
-                  </div>
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Field of study</span>
-                    <input className="jobsSeekInput" value={row.field_of_study || ""} onChange={(e) => updateEduRow(index, { field_of_study: e.target.value })} />
-                  </div>
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Major</span>
-                    <input className="jobsSeekInput" value={row.major || ""} onChange={(e) => updateEduRow(index, { major: e.target.value })} />
-                  </div>
-                </div>
-                <textarea
-                  className="jobsSeekInput candidateDashTextarea candidateDashTextareaSm"
-                  rows={2}
-                  placeholder="Honours, coursework, or other details"
-                  value={row.description || ""}
-                  onChange={(e) => updateEduRow(index, { description: e.target.value })}
-                />
-                <div className="candidateDashFormGrid">
-                  <div className="jobsSeekFieldBlock">
-                    <SiteDatePicker label="Start" value={row.start_date || ""} onChange={(v) => updateEduRow(index, { start_date: v })} />
-                  </div>
-                  <div className="jobsSeekFieldBlock">
-                    {!row.is_current ? (
-                      <SiteDatePicker label="End" value={row.end_date || ""} onChange={(v) => updateEduRow(index, { end_date: v })} />
-                    ) : (
-                      <div className="presentNowTag">Currently studying</div>
-                    )}
-                  </div>
-                </div>
-                <div className="candidateDashMiniActions candidateDashMiniActionsRow">
-                  <label className="checkLine">
-                    <input
-                      type="checkbox"
-                      checked={!!row.is_current}
-                      onChange={(e) => updateEduRow(index, { is_current: e.target.checked, end_date: e.target.checked ? "" : row.end_date })}
-                    />
-                    I am currently enrolled
-                  </label>
-                  {eduRows.length > 1 && (
-                    <button type="button" className="btnGhost candidateDashMiniBtn" onClick={() => removeEduRow(index)}>
+          </div>
+          <div
+            className={`upload-zone ${dragActive ? "upload-zone-active" : ""}`}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={onDropZoneDrop}
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="candidateDashDropInput"
+              accept=".pdf,.docx,.jpg,.jpeg,.png"
+              multiple
+              onChange={(e) => uploadResumeBatch(e.target.files)}
+            />
+            <div className="uz-icon">📄</div>
+            <div className="uz-text">{uploadingResume ? "Uploading resumes…" : "Drag and drop your resume here"}</div>
+            <div className="uz-sub">Supports PDF, DOC, DOCX, JPG, JPEG, and PNG</div>
+            <button type="button" className="btn btn-dark btn-sm" onClick={() => fileInputRef.current?.click()}>
+              Browse file
+            </button>
+          </div>
+          {resumeList.length > 0 && (
+            <ul className="resumeList">
+              {resumeList.map((r) => (
+                <li key={r.id} className="resumeListItem">
+                  <input
+                    className="field input"
+                    value={renameDraft[r.id] ?? ""}
+                    onChange={(e) => setRenameDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                    aria-label="Resume display name"
+                  />
+                  <div className="resumeListMeta">{r.stored_filename}</div>
+                  <div className="resumeListActions">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => openResumePreviewModal(r.id, renameDraft[r.id] ?? r.display_name, r.stored_filename)}
+                    >
+                      Open
+                    </button>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => deleteResume(r.id)}>
                       Remove
                     </button>
-                  )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              Personal information
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="field">
+              <label>Full name *</label>
+              <input type="text" placeholder="John Smith" value={profile.full_name || ""} onChange={(e) => setProfile({ ...profile, full_name: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Email *</label>
+              <input type="email" value={user?.email || ""} readOnly />
+            </div>
+            <div className="field">
+              <label>Phone number</label>
+              <input type="tel" placeholder="+61 400 000 000" value={profile.mobile_number || ""} onChange={(e) => setProfile({ ...profile, mobile_number: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Location</label>
+              <input type="text" placeholder="Sydney, NSW" value={profile.location || ""} onChange={(e) => setProfile({ ...profile, location: e.target.value })} />
+            </div>
+          </div>
+          <div className="field">
+            <label>LinkedIn profile</label>
+            <input type="url" placeholder="https://linkedin.com/in/yourname" value={profile.linkedin_url || ""} onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>About me</label>
+            <textarea rows={3} placeholder="Write a short summary about yourself, your experience and what you're looking for..." value={profile.summary || ""} onChange={(e) => setProfile({ ...profile, summary: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
+              Education
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="field">
+              <label>Highest education level *</label>
+              <select value={profile.education_level || ""} onChange={(e) => setProfile({ ...profile, education_level: e.target.value })}>
+                <option value="">Select...</option>
+                <option>High school</option>
+                <option>Diploma / Certificate</option>
+                <option>Bachelor's degree</option>
+                <option>Master's degree</option>
+                <option>PhD</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Field of study / Major *</label>
+              <input placeholder="e.g. Computer Science" value={profile.major || ""} onChange={(e) => setProfile({ ...profile, major: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>University / Institution</label>
+              <input
+                placeholder="e.g. University of Wollongong"
+                value={eduRows[0]?.institution || ""}
+                onChange={(e) => updateEduRow(0, { institution: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Graduation year</label>
+              <input
+                placeholder="2024"
+                value={eduRows[0]?.end_date ? String(eduRows[0].end_date).slice(0, 4) : ""}
+                onChange={(e) => updateEduRow(0, { end_date: e.target.value ? `${e.target.value}-01-01` : "" })}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label>Education notes</label>
+            <textarea
+              rows={2}
+              placeholder="Honours, coursework, or other details..."
+              value={eduRows[0]?.description || ""}
+              onChange={(e) => updateEduRow(0, { description: e.target.value })}
+            />
+          </div>
+          <div className="pcard-footer">
+            <button type="button" className="pcard-action" onClick={addEduRow}>
+              + Add entry
+            </button>
+          </div>
+          {eduRows.length > 1 ? (
+            <div className="profileSubList">
+              {eduRows.slice(1).map((row, index) => (
+                <div className="profileSubCard" key={`edu-${index + 1}`}>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label>Institution</label>
+                      <input value={row.institution || ""} onChange={(e) => updateEduRow(index + 1, { institution: e.target.value })} />
+                    </div>
+                    <div className="field">
+                      <label>Degree</label>
+                      <input value={row.degree || ""} onChange={(e) => updateEduRow(index + 1, { degree: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label>Field of study</label>
+                      <input value={row.field_of_study || ""} onChange={(e) => updateEduRow(index + 1, { field_of_study: e.target.value })} />
+                    </div>
+                    <div className="field">
+                      <label>Major</label>
+                      <input value={row.major || ""} onChange={(e) => updateEduRow(index + 1, { major: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Description</label>
+                    <textarea rows={2} value={row.description || ""} onChange={(e) => updateEduRow(index + 1, { description: e.target.value })} />
+                  </div>
+                  <div className="profileSubActions">
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => removeEduRow(index + 1)}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="2" y="7" width="20" height="14" rx="2" />
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              </svg>
+              Work experience
+            </div>
+            <button type="button" className="pcard-action" onClick={addWorkRow}>
+              + Add entry
+            </button>
+          </div>
+          <div className="exp-timeline">
+            {workRows.map((row, index) => (
+              <div className="exp-item" key={`work-preview-${index}`}>
+                <div className="exp-role">{row.job_title || "Job title"}</div>
+                <div className="exp-co">{row.company_name || "Company name"}</div>
+                <div className="exp-date">
+                  {row.start_date ? String(row.start_date).slice(0, 7) : "Start"} - {row.is_current ? "Present" : row.end_date ? String(row.end_date).slice(0, 7) : "Present"}
                 </div>
               </div>
             ))}
-            <button type="button" className="candidateDashTextBtn" onClick={addEduRow}>
-              + Add education
-            </button>
-
-            <h3 className="candidateDashSubheading">Work experience</h3>
-            <p className="candidateDashCardHint candidateDashCardHintTight">Same fields as onboarding — include dates for a complete profile.</p>
+          </div>
+          <div className="divider" />
+          <div className="field">
+            <label>Current / most recent job title</label>
+            <input placeholder="e.g. Product Owner" value={profile.headline || ""} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Work experience summary</label>
+            <textarea rows={2} placeholder="Briefly describe your work history and key responsibilities..." value={profile.summary || ""} onChange={(e) => setProfile({ ...profile, summary: e.target.value })} />
+          </div>
+          <div className="profileSubList">
             {workRows.map((row, index) => (
-              <div className="candidateDashMiniCard" key={`dash-work-${index}`}>
-                <div className="candidateDashFormGrid">
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Role</span>
-                    <input className="jobsSeekInput" placeholder="Job role" value={row.job_title || ""} onChange={(e) => updateWorkRow(index, { job_title: e.target.value })} />
+              <div className="profileSubCard" key={`work-${index}`}>
+                <div className="grid-2">
+                  <div className="field">
+                    <label>Role</label>
+                    <input value={row.job_title || ""} onChange={(e) => updateWorkRow(index, { job_title: e.target.value })} />
                   </div>
-                  <div className="jobsSeekFieldBlock">
-                    <span className="jobsSeekFieldLabel">Company</span>
-                    <input className="jobsSeekInput" placeholder="Company name" value={row.company_name || ""} onChange={(e) => updateWorkRow(index, { company_name: e.target.value })} />
+                  <div className="field">
+                    <label>Company</label>
+                    <input value={row.company_name || ""} onChange={(e) => updateWorkRow(index, { company_name: e.target.value })} />
                   </div>
                 </div>
-                <textarea
-                  className="jobsSeekInput candidateDashTextarea candidateDashTextareaSm"
-                  rows={3}
-                  placeholder="Job description"
-                  value={row.description || ""}
-                  onChange={(e) => updateWorkRow(index, { description: e.target.value })}
-                />
-                <div className="candidateDashFormGrid">
-                  <div className="jobsSeekFieldBlock">
-                    <SiteDatePicker label="Start date" value={row.start_date || ""} onChange={(v) => updateWorkRow(index, { start_date: v })} />
+                <div className="field">
+                  <label>Description</label>
+                  <textarea rows={3} value={row.description || ""} onChange={(e) => updateWorkRow(index, { description: e.target.value })} />
+                </div>
+                <div className="grid-2">
+                  <div className="field">
+                    <label>Start date</label>
+                    <SiteDatePicker label="" value={row.start_date || ""} onChange={(v) => updateWorkRow(index, { start_date: v })} />
                   </div>
-                  <div className="jobsSeekFieldBlock">
+                  <div className="field">
                     {!row.is_current ? (
-                      <SiteDatePicker label="End date" value={row.end_date || ""} onChange={(v) => updateWorkRow(index, { end_date: v })} />
+                      <>
+                        <label>End date</label>
+                        <SiteDatePicker label="" value={row.end_date || ""} onChange={(v) => updateWorkRow(index, { end_date: v })} />
+                      </>
                     ) : (
                       <div className="presentNowTag">Present role</div>
                     )}
                   </div>
                 </div>
-                <div className="candidateDashMiniActions candidateDashMiniActionsRow">
+                <div className="profileSubActions">
                   <label className="checkLine">
                     <input
                       type="checkbox"
@@ -3897,114 +3937,151 @@ function CandidateDashboard() {
                     />
                     I currently work here
                   </label>
-                  {workRows.length > 1 && (
-                    <button type="button" className="btnGhost candidateDashMiniBtn" onClick={() => removeWorkRow(index)}>
-                      Remove
-                    </button>
-                  )}
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => removeWorkRow(index)}>
+                    Remove
+                  </button>
                 </div>
               </div>
             ))}
-            <div className="candidateDashSaveRow">
-              <button type="button" className="candidateDashTextBtn candidateDashTextBtnInline" onClick={addWorkRow}>
-                + Add role
-              </button>
-            </div>
-          </article>
+          </div>
+        </div>
 
-          <article className="candidateDashCard" aria-labelledby="dash-resume-heading">
-            <h2 id="dash-resume-heading" className="candidateDashCardTitle">
-              Resumes
-            </h2>
-            <p className="candidateDashCardHint">
-              Use <strong>Save changes</strong> below to save your profile, experience, and resume display names together. After each upload, set the name in the list. Uploads are parsed to refresh skills—drag files in or click to upload.
-            </p>
-            <div
-              className={`candidateDashDropzone ${dragActive ? "candidateDashDropzoneActive" : ""}`}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragOver={(e) => e.preventDefault()}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={onDropZoneDrop}
-              onClick={() => fileInputRef.current?.click()}
-              role="button"
-              tabIndex={0}
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Skills
+            </div>
+          </div>
+          <div className="skill-input-wrap" ref={skillSuggestRef}>
+            <input
+              className="field-input skill-input"
+              placeholder="e.g. JavaScript, Python, Figma..."
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+                if (e.key === "Enter") {
                   e.preventDefault();
-                  fileInputRef.current?.click();
+                  addSkill(skillInput);
                 }
               }}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="candidateDashDropInput"
-                accept=".pdf,.docx,.jpg,.jpeg,.png"
-                multiple
-                onChange={(e) => uploadResumeBatch(e.target.files)}
-              />
-              <div className="candidateDashDropzoneInner">
-                <span className="candidateDashDropTitle">{uploadingResume ? "Uploading…" : "Drop files here or click to upload"}</span>
-                <span className="candidateDashDropMeta">PDF, DOCX, or images · multiple files OK</span>
-              </div>
-            </div>
-
-            {resumeList.length > 0 && (
-              <ul className="candidateDashResumeList">
-                {resumeList.map((r) => (
-                  <li key={r.id} className="candidateDashResumeItem">
-                    <div className="candidateDashResumeMain">
-                      <input
-                        className="jobsSeekInput candidateDashResumeNameInput"
-                        value={renameDraft[r.id] ?? ""}
-                        onChange={(e) => setRenameDraft((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                        aria-label="Resume display name"
-                      />
-                      <span className="candidateDashResumeFile">{r.stored_filename}</span>
-                      <span className="candidateDashResumeDate">{r.created_at ? String(r.created_at).slice(0, 10) : ""}</span>
-                    </div>
-                    <div className="candidateDashResumeActions">
-                      <button
-                        type="button"
-                        className="candidateDashResumeOpenBtn"
-                        onClick={() => openResumePreviewModal(r.id, renameDraft[r.id] ?? r.display_name, r.stored_filename)}
-                      >
-                        Open
-                      </button>
-                      <button type="button" className="candidateDashResumeDanger" onClick={() => deleteResume(r.id)}>
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="candidateDashSaveRow candidateDashSaveRowAfterResume">
-              <button type="button" className="modernBtn jobsSeekCta candidateDashSave" onClick={saveProfile} disabled={savingProfile}>
-                {savingProfile ? "Saving…" : "Save changes"}
-              </button>
-            </div>
-          </article>
-
-          <article className="candidateDashCard candidateDashAccountDanger" aria-labelledby="dash-account-heading">
-            <h2 id="dash-account-heading" className="candidateDashCardTitle">
-              Account
-            </h2>
-            <p className="candidateDashCardHint">
-              Permanently remove your candidate account, profile, resumes, and applications from SkillMesh. This cannot be undone.
-            </p>
-            <button
-              type="button"
-              className="candidateDashDeleteAccountBtn"
-              disabled={deletingAccount}
-              onClick={deleteAccount}
-            >
-              {deletingAccount ? "Deleting…" : "Delete account"}
+              autoComplete="off"
+            />
+            <button type="button" className="add-btn" onClick={() => addSkill(skillInput)}>
+              + Add
             </button>
-          </article>
+          </div>
+          {skillSuggestions.length > 0 ? (
+            <div className="skillSuggestions">
+              {skillSuggestions.map((s) => (
+                <button type="button" key={s.skill_name} className="skillSuggestion" onClick={() => addSkill(s.skill_name)}>
+                  {s.skill_name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="skill-tags">
+            {(profile.skills || []).map((s, i) => (
+              <span className="skill-tag" key={`${s.skill_name}-${i}`}>
+                {s.skill_name}
+                <button type="button" onClick={() => removeSkill(i)} aria-label={`Remove ${s.skill_name}`}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="pcard">
+          <div className="pcard-header">
+            <div className="pcard-title">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" />
+              </svg>
+              Job preferences
+            </div>
+            {!isPremiumCandidate(user) ? <span className="memberBadgeSoft">Free</span> : <span className="memberBadgeActive">Premium</span>}
+          </div>
+          <div className="grid-2">
+            <div className="field">
+              <label>Preferred work mode</label>
+              <select value={profile.preferred_mode || ""} onChange={(e) => setProfile({ ...profile, preferred_mode: e.target.value })}>
+                <option value="">Any</option>
+                <option value="remote">Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="onsite">On-site</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Availability</label>
+              <select value={profile.availability || ""} onChange={(e) => setProfile({ ...profile, availability: e.target.value })}>
+                <option value="">Select...</option>
+                <option value="immediate">Immediately</option>
+                <option value="2_weeks">Within 2 weeks</option>
+                <option value="1_month">Within 1 month</option>
+                <option value="internship">Internship period only</option>
+                <option value="not_looking">Not actively looking</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Preferred location</label>
+              <input placeholder="e.g. Sydney, Melbourne or Remote" value={profile.location || ""} onChange={(e) => setProfile({ ...profile, location: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Postcode</label>
+              <input placeholder="e.g. 2000" value={profile.postcode || ""} onChange={(e) => setProfile({ ...profile, postcode: e.target.value })} />
+            </div>
+          </div>
+          <div className="field">
+            <label>Preferred job categories</label>
+            <div className="skill-tags">
+              {jobCategories.map((c) => {
+                const on = categoryIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`skill-tag categoryTag ${on ? "categoryTagActive" : ""}`}
+                    aria-pressed={on}
+                    onClick={() => toggleCategory(c.id)}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="pcard">
+          {isPremiumCandidate(user) ? (
+            <div className="member-active">
+              <span className="member-dot" />
+              Premium membership active
+            </div>
+          ) : (
+            <div className="member-lock">
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>
+                Unlock full profile analytics and unlimited job recommendations with <Link to="/candidate/settings/membership">Member access →</Link>
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="form-actions">
+          <Link className="btn btn-outline" to="/">
+            Cancel
+          </Link>
+          <button className="btn btn-primary" type="button" onClick={saveProfile} disabled={savingProfile}>
+            {savingProfile ? "Saving…" : "Save profile"}
+          </button>
         </div>
       </div>
 
@@ -4027,10 +4104,6 @@ function CandidateDashboard() {
           </div>
         </div>
       )}
-
-      <footer className="jobsSeekFooter">
-        © {new Date().getFullYear()} SkillMesh · {user?.email}
-      </footer>
     </main>
   );
 }
@@ -6163,14 +6236,12 @@ function Home() {
     const q = homeJobQuery.trim();
     try {
       if (!q) {
-        const feed = await api("/api/jobs/feed", { withAuth: false });
-        const list = Array.isArray(feed) ? feed : [];
+        const list = await fetchJobFeedCached();
         setJobs(list.slice(0, 6));
         setHomeSearchLabel("");
         return;
       }
-      const rows = await api(`/api/jobs/search?keyword=${encodeURIComponent(q)}`, { withAuth: false });
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchJobSearchCached(`keyword=${encodeURIComponent(q)}`);
       setJobs(list.slice(0, 20));
       setHomeSearchLabel(q);
     } catch (err) {

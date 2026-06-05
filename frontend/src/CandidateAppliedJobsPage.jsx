@@ -110,7 +110,7 @@ export function CandidateAppliedJobsPage() {
             <Link className="jobsSeekCta" to="/">
               Browse jobs
             </Link>
-            <Link className="jobsSeekLinkBtn" to="/candidate">
+            <Link className="jobsSeekLinkBtn candidateAppliedJobsHeroSecondary" to="/candidate">
               Back to profile
             </Link>
           </div>
