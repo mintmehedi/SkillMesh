@@ -279,7 +279,7 @@ else:
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 FEATURE_FLAGS = {
-    "enable_text_similarity": os.environ.get("FF_ENABLE_TEXT_SIMILARITY", "false").lower() == "true",
+    "enable_text_similarity": os.environ.get("FF_ENABLE_TEXT_SIMILARITY", "true").lower() == "true",
 }
 
 # ESCO (EU Commission) skill search — enriches /api/candidates/skills/suggest/ when the DB is sparse.

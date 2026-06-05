@@ -7,7 +7,7 @@ from django.db.models.functions import Coalesce, Greatest
 
 
 def fuzzy_search_enabled() -> bool:
-    return bool(getattr(settings, "FEATURE_FLAGS", {}).get("enable_text_similarity", False))
+    return bool(getattr(settings, "FEATURE_FLAGS", {}).get("enable_text_similarity", True))
 
 
 def fuzzy_similarity_expr(*fields: str, term: str):
