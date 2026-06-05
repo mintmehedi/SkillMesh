@@ -58,3 +58,23 @@ dist/
 
 # Cursor
 .cursor
+
+# Figma
+.figma-captures.json
+.figma-captures-remaining.json
+.figma-captures-remaining.json  
+
+# Scripts
+scripts/    
+
+# Skills
+.agents/
+.agents/skills/
+.agents/skills/supabase-postgres-best-practices/
+.agents/skills/supabase-postgres-best-practices/references/
+.agents/skills/supabase-postgres-best-practices/references/_template.md
+.agents/skills/supabase-postgres-best-practices/references/_sections.md
+.agents/skills/supabase-postgres-best-practices/references/_contributing.md
+.agents/skills/supabase-postgres-best-practices/references/*.md
+.agents/skills/supabase-postgres-best-practices/references/query-your-reference-name.md
+.agents/skills/supabase-postgres-best-practices/references/query-your-reference-name.md 
