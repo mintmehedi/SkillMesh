@@ -6,6 +6,7 @@ import { useAuth } from "./auth";
 import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { SiteBrandBar } from "./SiteBrandBar";
 import { formatCompensationSummary, formatPostedShort, formatWorkModeLabel } from "./jobFormatters";
+import { fetchJobDetailCached } from "./jobCache";
 
 const COVER_NONE = "none";
 const COVER_IN_APP = "in_app";
@@ -131,7 +132,7 @@ export function JobApplyPage() {
       setLoadError("");
       setJob(null);
       try {
-        const data = await api(`/api/jobs/${idNum}/`, { withAuth: false });
+        const data = await fetchJobDetailCached(idNum);
         if (!cancelled) setJob(data);
       } catch {
         if (!cancelled) setLoadError("This job is not available or has been closed.");

@@ -61,7 +61,6 @@ export function EmployerHomePage() {
 
   return (
     <main className="employerLandingPage">
-      <div className="employerLandingAmbient" aria-hidden="true" />
       <div className="employerLandingShell">
         <header className="employerLandingHeader">
           <div className="employerLandingTopRow">
@@ -69,19 +68,22 @@ export function EmployerHomePage() {
               <img className="homeHeaderLogo" src={ldLogo} alt="" />
               <span className="homeHeaderWordmark">SkillMesh</span>
             </Link>
-          </div>
-          <h1 className="employerLandingTitle">SkillMesh</h1>
-          <p className="employerLandingTagline">Intelligent Talent Matching Platform</p>
-          <div className="employerLandingToolbar" aria-label="Employer account">
             {user?.email ? (
               <button type="button" className="employerLandingLogout" onClick={() => logout?.()}>
                 Logout ({user.email})
               </button>
             ) : null}
           </div>
+          <div className="employerLandingHero">
+            <p className="hero-eyebrow">Employer portal</p>
+            <h1>Find candidates with structure, not clutter.</h1>
+            <p className="employerLandingTagline">
+              Manage roles, company profile, applications, and team invites from one workspace.
+            </p>
+          </div>
         </header>
 
-        <section className="employerLandingIntro" aria-labelledby="employer-landing-intro-heading">
+        <section className="employerLandingIntro card" aria-labelledby="employer-landing-intro-heading">
           <h2 id="employer-landing-intro-heading" className="employerLandingIntroTitle">
             Welcome back
           </h2>
@@ -92,13 +94,15 @@ export function EmployerHomePage() {
         </section>
 
         <section className="employerLandingInvite card" aria-labelledby="employer-invite-heading">
-          <h2 id="employer-invite-heading" className="employerLandingInviteTitle">
-            Invite team
-          </h2>
-          <p className="employerLandingInviteLead">
-            Add a colleague&apos;s email. They&apos;ll register as an employer with that address and skip company
-            onboarding — same jobs and company profile as your workspace.
-          </p>
+          <div className="employerLandingInviteHead">
+            <h2 id="employer-invite-heading" className="employerLandingInviteTitle">
+              Invite team
+            </h2>
+            <p className="employerLandingInviteLead">
+              Add a colleague&apos;s email. They&apos;ll join the same employer workspace with your company profile and
+              job listings.
+            </p>
+          </div>
           <form className="employerLandingInviteForm" onSubmit={sendInvite}>
             <label className="employerLandingInviteLabel" htmlFor="employer-invite-email">
               Colleague email
@@ -118,7 +122,11 @@ export function EmployerHomePage() {
                 {sendBusy ? "Sending…" : "Send invite"}
               </button>
             </div>
-            {sendMessage ? <p className={sendMessage.includes("sent") ? "success employerLandingInviteFlash" : "error employerLandingInviteFlash"}>{sendMessage}</p> : null}
+            {sendMessage ? (
+              <p className={sendMessage.includes("sent") ? "success employerLandingInviteFlash" : "error employerLandingInviteFlash"}>
+                {sendMessage}
+              </p>
+            ) : null}
           </form>
           {invitesError ? <p className="error employerLandingInviteFlash">{invitesError}</p> : null}
           {invitesLoading ? (
@@ -145,7 +153,7 @@ export function EmployerHomePage() {
             </span>
             <h3 className="employerLandingCardTitle">Employer dashboard</h3>
             <p className="employerLandingCardText">
-              Search candidates by skills, experience, education, and location — or get ranked matches for each job.
+              Search candidates by skills, experience, education, and location.
             </p>
             <span className="employerLandingCardCta">Open dashboard →</span>
           </Link>
@@ -154,7 +162,7 @@ export function EmployerHomePage() {
               📋
             </span>
             <h3 className="employerLandingCardTitle">Job listings</h3>
-            <p className="employerLandingCardText">Create drafts, publish open roles, and edit how each job appears to candidates.</p>
+            <p className="employerLandingCardText">Create drafts, publish roles, and edit how each job appears.</p>
             <span className="employerLandingCardCta">Manage jobs →</span>
           </Link>
           <Link className="employerLandingCard" to="/employer/company">
@@ -162,7 +170,7 @@ export function EmployerHomePage() {
               🏢
             </span>
             <h3 className="employerLandingCardTitle">Company profile</h3>
-            <p className="employerLandingCardText">Industry, location, and story — what applicants see before they apply.</p>
+            <p className="employerLandingCardText">Industry, location, and story - what applicants see first.</p>
             <span className="employerLandingCardCta">Edit profile →</span>
           </Link>
           <Link className="employerLandingCard" to="/employer/applications">
@@ -170,9 +178,7 @@ export function EmployerHomePage() {
               📥
             </span>
             <h3 className="employerLandingCardTitle">Applications received</h3>
-            <p className="employerLandingCardText">
-              Review who applied to each role and open candidate profiles from your hiring inbox.
-            </p>
+            <p className="employerLandingCardText">Review applicants and open candidate profiles from your inbox.</p>
             <span className="employerLandingCardCta">View applications →</span>
           </Link>
           <Link className="employerLandingCard" to="/employer/support">
@@ -180,9 +186,7 @@ export function EmployerHomePage() {
               🛟
             </span>
             <h3 className="employerLandingCardTitle">Support & FAQ</h3>
-            <p className="employerLandingCardText">
-              Contact the SkillMesh platform developer and get quick answers to common employer questions.
-            </p>
+            <p className="employerLandingCardText">Contact the SkillMesh platform developer and get quick answers.</p>
             <span className="employerLandingCardCta">Open support →</span>
           </Link>
         </section>
