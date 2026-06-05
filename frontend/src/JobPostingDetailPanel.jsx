@@ -139,12 +139,8 @@ export function JobPostingDetailPanel({
               </Link>
             </p>
           )}
-          {!fullPageLayout ? (
-            <>
-              <h3 className="jobsSeekDetailTitle">{job.title}</h3>
-              <p className="jobsSeekDetailSub">{job.company_info || "Employer"}</p>
-            </>
-          ) : null}
+          <h3 className="jobsSeekDetailTitle">{job.title}</h3>
+          <p className="jobsSeekDetailSub">{job.company_info || "Employer"}</p>
         </div>
         {showBookmark ? (
           <button
