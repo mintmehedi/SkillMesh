@@ -5487,23 +5487,20 @@ function EmployerDashboard() {
     (async () => {
       setDashLoading(true);
       try {
-        try {
-          const c = await api("/api/employers/company/profile");
-          if (!cancelled && c?.id) {
+        const [profileRes, myJobs, cats] = await Promise.all([
+          api("/api/employers/company/profile").catch(() => null),
+          api("/api/employers/jobs"),
+          api("/api/candidates/job-categories/", { withAuth: false }).catch(() => []),
+        ]);
+        if (!cancelled) {
+          const c = profileRes;
+          if (c?.id) {
             setCompanyProfile((prev) => ({
               ...prev,
               ...c,
               founded_year: c.founded_year != null ? String(c.founded_year) : "",
             }));
           }
-        } catch {
-          /* no profile */
-        }
-        const [myJobs, cats] = await Promise.all([
-          api("/api/employers/jobs"),
-          api("/api/candidates/job-categories/", { withAuth: false }).catch(() => []),
-        ]);
-        if (!cancelled) {
           setJobs(Array.isArray(myJobs) ? myJobs : []);
           setJobCategories(Array.isArray(cats) ? cats : []);
         }

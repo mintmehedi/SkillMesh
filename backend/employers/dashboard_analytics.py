@@ -42,11 +42,12 @@ def _style_axes(ax):
         spine.set_color("#2d333b")
 
 
-def build_job_status_chart(job_rows) -> dict | None:
-    counts = Counter()
-    for row in job_rows:
-        status = (row.get("status") or "open").lower()
-        counts[status] += 1
+def build_job_status_chart(job_rows=None, *, counts: Counter | None = None) -> dict | None:
+    if counts is None:
+        counts = Counter()
+        for row in job_rows or []:
+            status = (row.get("status") or "open").lower()
+            counts[status] += 1
     if not counts:
         return None
     labels = list(counts.keys())
@@ -66,11 +67,12 @@ def build_job_status_chart(job_rows) -> dict | None:
     }
 
 
-def build_application_status_chart(app_rows) -> dict | None:
-    counts = Counter()
-    for row in app_rows:
-        status = (row.get("status") or "applied").lower()
-        counts[status] += 1
+def build_application_status_chart(app_rows=None, *, counts: Counter | None = None) -> dict | None:
+    if counts is None:
+        counts = Counter()
+        for row in app_rows or []:
+            status = (row.get("status") or "applied").lower()
+            counts[status] += 1
     if not counts:
         return None
     labels = list(counts.keys())
@@ -126,30 +128,34 @@ def build_applications_timeline_chart(owner_id: int, days: int = 14) -> dict | N
     }
 
 
+def _status_counts(qs, *, status_field: str = "status", default_status: str = "open") -> Counter:
+    counts = Counter()
+    for row in qs.values(status_field).annotate(total=Count("id")):
+        status = (row.get(status_field) or default_status).lower()
+        counts[status] += row["total"]
+    return counts
+
+
 def build_dashboard_charts(owner_id: int) -> tuple[list[dict], dict]:
-    jobs = list(
-        JobPosting.objects.filter(employer_id=owner_id).values("id", "status", "title", "created_at")
-    )
-    apps = list(
-        Application.objects.filter(job__employer_id=owner_id).values("id", "status", "created_at", "job_id")
-    )
+    job_qs = JobPosting.objects.filter(employer_id=owner_id)
+    app_qs = Application.objects.filter(job__employer_id=owner_id)
+    job_counts = _status_counts(job_qs)
+    app_counts = _status_counts(app_qs, status_field="status", default_status="applied")
     charts = []
-    job_chart = build_job_status_chart(jobs)
+    job_chart = build_job_status_chart(counts=job_counts)
     if job_chart:
         charts.append(job_chart)
-    app_chart = build_application_status_chart(apps)
+    app_chart = build_application_status_chart(counts=app_counts)
     if app_chart:
         charts.append(app_chart)
     timeline = build_applications_timeline_chart(owner_id)
     if timeline:
         charts.append(timeline)
+    since_14d = timezone.now() - timedelta(days=14)
     summary = {
-        "total_jobs": len(jobs),
-        "open_jobs": sum(1 for j in jobs if (j.get("status") or "").lower() == "open"),
-        "total_applications": len(apps),
-        "applications_last_14_days": Application.objects.filter(
-            job__employer_id=owner_id,
-            created_at__gte=timezone.now() - timedelta(days=14),
-        ).count(),
+        "total_jobs": job_qs.count(),
+        "open_jobs": job_qs.filter(status__iexact="open").count(),
+        "total_applications": app_qs.count(),
+        "applications_last_14_days": app_qs.filter(created_at__gte=since_14d).count(),
     }
     return charts, summary

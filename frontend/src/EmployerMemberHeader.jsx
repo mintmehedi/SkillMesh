@@ -53,7 +53,7 @@ export function EmployerMemberHeader() {
 
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
-      <SiteBrandBar brandClassName="candidateHeaderBrand" />
+      <SiteBrandBar brandClassName="candidateHeaderBrand" showProBadge={isPremium} />
       <div className="candidateProfileMenuRoot" ref={menuRef}>
         <button
           type="button"
@@ -66,11 +66,6 @@ export function EmployerMemberHeader() {
           <span className="candidateProfileAvatar" aria-hidden="true">
             {initials}
           </span>
-          {isPremium ? (
-            <span className="candidatePremiumBrandBadge" aria-label="Premium member" title="Premium member">
-              PRO
-            </span>
-          ) : null}
           <span className={`candidateProfileChev ${menuOpen ? "candidateProfileChevOpen" : ""}`} aria-hidden />
         </button>
         <div
