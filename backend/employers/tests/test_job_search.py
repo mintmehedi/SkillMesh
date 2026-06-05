@@ -30,6 +30,7 @@ class JobSearchApiTests(APITestCase):
         )
         cls.cat_nurse = JobCategory.objects.create(slug="nurse", name="Nursing", sort_order=1)
         cls.cat_dev = JobCategory.objects.create(slug="dev", name="Software", sort_order=2)
+        cls.cat_hospitality = JobCategory.objects.create(slug="hospitality", name="Hospitality", sort_order=3)
 
         cls.job_melb = JobPosting.objects.create(
             employer=cls.employer,
@@ -59,6 +60,16 @@ class JobSearchApiTests(APITestCase):
             location="Remote",
             company_info="Acme Tech",
             work_mode=JobPosting.WorkMode.REMOTE,
+            status="open",
+        )
+        cls.job_hospitality = JobPosting.objects.create(
+            employer=cls.employer,
+            job_category=cls.cat_hospitality,
+            title="Venue Supervisor",
+            jd_text="Lead floor operations for a busy hospitality venue.",
+            location="Sydney NSW",
+            company_info="Acme Hospitality Group",
+            work_mode=JobPosting.WorkMode.ONSITE,
             status="open",
         )
 
@@ -129,3 +140,10 @@ class JobSearchApiTests(APITestCase):
         ids = [row["id"] for row in res.data]
         self.assertIn(self.job_remote.id, ids)
         self.assertLess(ids.index(self.job_remote.id), len(ids))
+
+    @override_settings(FEATURE_FLAGS={"enable_text_similarity": True})
+    def test_fuzzy_keyword_matches_typo_in_hospitality(self):
+        res = self.client.get("/api/jobs/search", {"keyword": "hopitality"})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        ids = [row["id"] for row in res.data]
+        self.assertIn(self.job_hospitality.id, ids)

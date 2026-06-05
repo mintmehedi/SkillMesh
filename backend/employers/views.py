@@ -125,7 +125,8 @@ class JobSearchView(generics.ListAPIView):
                 _lfa_txt=Cast("looking_for_additional_bullets", TextField()),
                 _rb_txt=Cast("role_bullets", TextField()),
                 _wcu_txt=Cast("why_choose_us_bullets", TextField()),
-            ).filter(
+            )
+            exact_keyword_q = (
                 Q(title__icontains=keyword)
                 | Q(jd_text__icontains=keyword)
                 | Q(location__icontains=keyword)
@@ -144,7 +145,7 @@ class JobSearchView(generics.ListAPIView):
                 | Q(_lfa_txt__icontains=keyword)
                 | Q(_rb_txt__icontains=keyword)
                 | Q(_wcu_txt__icontains=keyword)
-            ).distinct()
+            )
             token_q = Q()
             for tok in token_list:
                 token_q &= (
@@ -155,7 +156,7 @@ class JobSearchView(generics.ListAPIView):
                     | Q(company_info__icontains=tok)
                 )
             if token_list and not fuzzy_enabled:
-                qs = qs.filter(token_q)
+                qs = qs.filter(exact_keyword_q).filter(token_q).distinct()
             if fuzzy_enabled:
                 qs = qs.annotate(
                     _fuzzy_score=fuzzy_similarity_expr(
@@ -174,7 +175,9 @@ class JobSearchView(generics.ListAPIView):
                         "employer__company_profile__state_region",
                         term=keyword,
                     )
-                ).filter(_fuzzy_score__gte=0.18)
+                ).filter(exact_keyword_q | Q(_fuzzy_score__gte=0.18)).distinct()
+            elif not token_list:
+                qs = qs.filter(exact_keyword_q).distinct()
 
         cat = (self.request.query_params.get("category") or "").strip()
         if cat.isdigit():
