@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { api } from "./api";
 import { CandidateMemberHeader } from "./CandidateMemberHeader";
 import { companyAvatarLetter, formatPostedShort, formatWorkModeLabel } from "./jobFormatters";
-import { fetchJobDetailCached } from "./jobCache";
 import { LS_SAVED_JOBS, loadSavedJobIds, persistSavedJobIds } from "./savedJobs";
 
 export function CandidateSavedJobsPage() {
@@ -34,7 +34,7 @@ export function CandidateSavedJobsPage() {
       const entries = await Promise.all(
         savedOrder.map(async (id) => {
           try {
-            const j = await fetchJobDetailCached(id);
+            const j = await api(`/api/jobs/${id}/`, { withAuth: false });
             return j && j.id ? [id, j] : [id, null];
           } catch {
             return [id, null];

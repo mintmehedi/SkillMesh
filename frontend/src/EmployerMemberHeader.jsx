@@ -53,7 +53,7 @@ export function EmployerMemberHeader() {
 
   return (
     <header className={`homeHeader ${headerScrolled ? "homeHeaderScrolled" : ""}`}>
-      <SiteBrandBar brandClassName="candidateHeaderBrand" showBack={false} showProBadge={isPremium} />
+      <SiteBrandBar brandClassName="candidateHeaderBrand" showProBadge={isPremium} />
       <div className="candidateProfileMenuRoot" ref={menuRef}>
         <button
           type="button"

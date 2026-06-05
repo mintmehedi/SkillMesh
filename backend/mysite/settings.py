@@ -113,23 +113,10 @@ if _running_tests:
         DATABASE_URL = test_db_url
 
 is_postgres = DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
-
-
-def _uses_supabase_pooler(db_url: str) -> bool:
-    return ".pooler.supabase.com" in (db_url or "")
-
-
-db_conn_max_age = int(
-    os.environ.get(
-        "DB_CONN_MAX_AGE",
-        "0" if _uses_supabase_pooler(DATABASE_URL) else "600",
-    )
-)
-
 try:
     DATABASES = {
         "default": dj_database_url.parse(
-            DATABASE_URL, conn_max_age=db_conn_max_age, ssl_require=is_postgres
+            DATABASE_URL, conn_max_age=600, ssl_require=is_postgres
         ),
     }
     DATABASES["default"]["ENGINE"] = "mysite.db_backends.postgresql"
